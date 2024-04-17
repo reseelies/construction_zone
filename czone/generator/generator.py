@@ -197,7 +197,7 @@ class Generator(BaseGenerator):
     Methods
     """
 
-    def supply_atoms(self, bbox: np.ndarray):
+    def supply_atoms(self, bbox: np.ndarray, **kwargs):
         #generation method for pymatgen lattice structure
         min_extent, max_extent = self.voxel.get_extents(bbox)
         fcoords = np.copy(
@@ -412,12 +412,12 @@ class AmorphousGenerator(BaseGenerator):
     Methods
     """
 
-    def supply_atoms(self, bbox):
+    def supply_atoms(self, bbox, **kwargs):
         if self.use_old_result and self._old_result is not None:
             return self.old_result
         else:
             coords = gen_p_substrate(
-                np.max(bbox, axis=0) - np.min(bbox, axis=0), self.min_dist)
+                np.max(bbox, axis=0) - np.min(bbox, axis=0), self.min_dist, self.density, **kwargs)
             self._old_result = (coords, np.ones(coords.shape[0]) * self.species)
             return self.old_result
 
