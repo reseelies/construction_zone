@@ -9,7 +9,6 @@ from czone.molecule.molecule import BaseMolecule
 
 from ..volume import BaseVolume, makeRectPrism
 
-
 class Scene():
     """Scene classes manage multiple objects interacting in space with cell boundaries.
 
@@ -139,7 +138,7 @@ class Scene():
         Then, gather the list of priorities from all the objects.
         For each object, generate a True array of length ob.atoms. 
         For each object in the same priority level or lower, perform interiority 
-        check and repeatedly perform logical_and to see if atoms belong in scene.
+        check and repeatedly perform logical_and to see if atoms belong in scene.len
 
         - Lower priority numbers supercede objects with high priority numbers.
         - Objects on the same priority level will not supply atoms to the scene in their volume intersections.
@@ -147,22 +146,42 @@ class Scene():
         for ob in self.objects:
             ob.populate_atoms()
 
+
+        ## Sort objects by precedence and get packed list representation
+        # offsets is array of length N_priority_levels + 1, 
+        # rel_plevels is array of length N_objects, where priorities are >= 0
         rel_plevels, offsets = self._get_priorities()
 
         self._checks = []
 
+        ## TODO: add some heuristic checking for object collision,
+        ## otherwise, with many objects, a lot of unneccesary checks
         for i, ob in enumerate(self.objects):
             check = np.ones(ob.atoms.shape[0]).astype(bool)
+
+            # Grab the final index of the object sharing current priority level
             eidx = offsets[rel_plevels[i] + 1]
 
+            # Iterate over all objects up to priority level and check against their volumes
             for j in range(eidx):
-                if (i != j):
+                if (i != j): # Required, since checking all objects with p_j <= p_i
                     check_against = np.logical_not(
                         self.objects[j].checkIfInterior(ob.atoms))
                     check = np.logical_and(check, check_against)
 
             self._checks.append(check)
 
+    def populate_no_collisions(self):
+        """Populate the scene without checking for object overlap. Use only if known by construction
+            that objects have no intersection."""
+        for ob in self.objects:
+            ob.populate_atoms()
+        
+        self._checks = []
+        for i, ob in enumerate(self.objects):
+            check = np.ones(ob.atoms.shape[0]).astype(bool)
+            self._checks.append(check)
+    
     def to_file(self, fname, **kwargs):
         """Write atomic scene to an output file, using ASE write utilities.
 
