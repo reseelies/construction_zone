@@ -336,7 +336,9 @@ class Volume(BaseVolume):
 
             planes = [obj for obj in self.alg_objects if isinstance(obj, Plane)]
             if len(planes) > 3:
-                return get_bounding_box_planes(planes)
+                bbox, status = get_bounding_box_planes(planes)
+                if status == 0:
+                    return bbox
 
             cylinders = [obj for obj in self.alg_objects if isinstance(obj, Cylinder)]
             if len(cylinders) > 0:
@@ -344,9 +346,9 @@ class Volume(BaseVolume):
                 return bbox
 
 
-    def populate_atoms(self):
+    def populate_atoms(self, **kwargs):
         bbox = self.get_bounding_box()
-        coords, species = self.generator.supply_atoms(bbox)
+        coords, species = self.generator.supply_atoms(bbox, **kwargs)
         check = self.checkIfInterior(coords)
 
         self._atoms = coords[check, :]
@@ -540,6 +542,7 @@ def makeRectPrism(a, b, c, center=None):
     Returns:
         8x3 numpy array of 8 points defining a rectangular prism in space.
     """
+    print(a,b,c)
     points = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 0],
                        [1, 0, 1], [0, 1, 1], [1, 1, 1]],
                       dtype=np.float64)
