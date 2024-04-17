@@ -4,11 +4,12 @@ import numpy as np
 from ase import Atoms
 from pymatgen.core.structure import IMolecule
 from ..transform import BaseTransform
+from ..generator import BaseGenerator
 import warnings
 
 import copy
 
-class BaseMolecule(ABC):
+class BaseMolecule(BaseGenerator):
     """Base abstract class for Molecule objects.
 
     Molecule objects are intended to facilitate molecular atomic items, which
@@ -224,9 +225,8 @@ class BaseMolecule(ABC):
         """Reset orientation to align with global XYZ. Does not transform molecule."""
         self.orientation = np.eye(3)
 
-    def populate_atoms(self):
-        # return self.atoms
-        pass
+    def supply_atoms(self, *args, **kwargs):
+        return self.atoms, self.species 
 
     def checkIfInterior(self, testPoints: np.ndarray):
         ## TODO
