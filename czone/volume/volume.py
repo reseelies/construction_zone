@@ -62,7 +62,7 @@ class BaseVolume(ABC):
 
     @priority.setter
     def priority(self, priority):
-        if not isinstance(priority, int):
+        if not np.issubdtype(type(priority), np.integer):
             raise TypeError("Priority needs to be integer valued")
 
         self._priority = priority
