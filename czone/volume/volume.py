@@ -99,6 +99,10 @@ class BaseVolume(ABC):
         """
         ase_write(filename=fname, images=self.ase_atoms, **kwargs)
 
+    @abstractmethod
+    def from_volume(self, **kwargs):
+        pass
+
 
 class Volume(BaseVolume):
     """Volume object for representing convex spaces.
@@ -176,7 +180,7 @@ class Volume(BaseVolume):
     @points.setter
     def points(self, points):
         try:
-            self._points = np.array([])  #clear points
+            self._points = None #clear points
             self.addPoints(points)
         except AssertionError:
             raise ValueError("Check shape of input array.")
@@ -542,7 +546,6 @@ def makeRectPrism(a, b, c, center=None):
     Returns:
         8x3 numpy array of 8 points defining a rectangular prism in space.
     """
-    print(a,b,c)
     points = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 0],
                        [1, 0, 1], [0, 1, 1], [1, 1, 1]],
                       dtype=np.float64)

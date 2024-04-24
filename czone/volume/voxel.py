@@ -102,8 +102,20 @@ class Voxel():
         Returns:
             bool indicating whether vectors are collinear.
         """
+        #TODO: need a better check with tolerance
         return np.abs((np.dot(vec1, vec2) /
                        (np.linalg.norm(vec1) * np.linalg.norm(vec2)))) == 1.0
+
+    def get_voxel_coords(self, points):
+        """Convert points from Cartesian basis to voxel basis"""
+        points = points - self.origin
+        coords = np.linalg.solve(self.sbases, points.T).T
+        return coords
+    
+    def get_cartesian_coords(self, points):
+        """Convert points from voxel basis to Cartesian basis"""
+        res = (self.sbases @ points.T).T
+        return res + self.origin
 
     def get_extents(self, box: np.ndarray):
         """Determine minimum contiguous block of voxels that fully covers a space.
@@ -115,13 +127,8 @@ class Voxel():
             Tuple of minimum extents and maximum extents indicating how many
             voxels to tile in space, and where, to span a given region.
         """
-        extents = []
-        box = box - self.origin
-        for point in box:
-            extent = np.linalg.solve(self.sbases, np.array(point))
-            extents.append(extent)
 
-        extents = np.array(extents)
+        extents = self.get_voxel_coords(box)
         min_extent = np.floor(np.min(extents, axis=0))
         max_extent = np.ceil(np.max(extents, axis=0))
 
