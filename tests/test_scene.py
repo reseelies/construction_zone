@@ -2,6 +2,7 @@ import unittest
 import numpy as np
 from czone.volume.volume import Volume
 from czone.volume.algebraic import Sphere
+from czone.molecule import Molecule
 from czone.scene.scene import Scene
 from functools import reduce
 from itertools import repeat
@@ -76,6 +77,78 @@ class Test_Scene(unittest.TestCase):
                 self.assertTrue(len(test_ids) == len(ref_dict[up]))
 
 
+    def test_populate(self):
+        def get_objects(N_objects, min_priority=-10, max_priority=10):
+            for _ in range(N_objects):
+                N = 32
+                species = self.rng.integers(1,119,(N,1))
+                positions = self.rng.normal(size=(N,3))
+                mol = Molecule(species, positions)
+                sphere = Sphere(self.rng.uniform(2, 10), 
+                                self.rng.uniform(-10, 10, (3,)))
+                vol = Volume(alg_objects=[sphere],
+                                generator=mol, 
+                                priority=int(rng.integers(min_priority, max_priority)),)
+                yield vol
+            
+        def sort_atom_arrays(atoms, species):
+            order = np.argsort(atoms[:,0])
+            atoms = atoms[order]
+            species = species[order]
+            return atoms, species
+
+
+        def get_atoms_from_scene(s):
+            test_atoms, test_species = s.all_atoms, s.all_species
+            return sort_atom_arrays(test_atoms, test_species)
+        
+        def get_atoms_from_objects(objs):
+            ref_atoms = np.vstack([o.atoms for o in objs])
+            ref_species = np.concatenate([o.species for o in objs])
+            return sort_atom_arrays(ref_atoms, ref_species)
+        
+        def brute_force_collision(objs):
+            atoms = []
+            species = []
+            for i, iobj in enumerate(objs):
+                current_atoms = iobj.atoms
+                current_species = iobj.species
+                check = np.ones(current_atoms.shape[0], dtype=bool)
+                for j, jobj in enumerate(objs):
+                    if i == j:
+                        continue
+
+                    if jobj.priority <= iobj.priority:
+                        check = np.logical_and(check,
+                                               np.logical_not(jobj.checkIfInterior(current_atoms)))
+
+                atoms.append(current_atoms[check, :])
+                species.append(current_species[check])
+
+            ref_atoms = np.vstack(atoms)
+            ref_species = np.concatenate(species)
+            return sort_atom_arrays(ref_atoms, ref_species)
+
+
+        for _ in range(self.N_trials):
+            objs = list(get_objects(32))
+            scene = Scene(objects=objs)
+            
+            ## Populate scene and sort atoms by position
+            scene.populate_no_collisions()
+            test_atoms, test_species = get_atoms_from_scene(scene)
+
+            ref_atoms, ref_species = get_atoms_from_objects(objs)
+
+            self.assertTrue(np.array_equal(test_atoms, ref_atoms))
+            self.assertTrue(np.array_equal(test_species, ref_species))
+
+            ## Check collision handling
+            scene.populate()
+            test_atoms, test_species = get_atoms_from_scene(scene)
+            ref_atoms, ref_species = brute_force_collision(objs)
+            self.assertTrue(np.array_equal(test_atoms, ref_atoms))
+            self.assertTrue(np.array_equal(test_species, ref_species))
 
 
 

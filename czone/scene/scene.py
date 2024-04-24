@@ -170,7 +170,7 @@ class Scene(BaseScene):
                      positions=self.all_atoms,
                      cell=cell_dims)
 
-    def populate(self):
+    def populate(self, check_collisions=True):
         """Populate the scene with atoms according to Volumes and priority levels.
 
         First, every object populates atoms against its own boundaries.
@@ -198,28 +198,23 @@ class Scene(BaseScene):
         for i, ob in enumerate(self.objects):
             check = np.ones(ob.atoms.shape[0]).astype(bool)
 
-            # Grab the final index of the object sharing current priority level
-            eidx = offsets[rel_plevels[i] + 1]
+            if check_collisions:
+                # Grab the final index of the object sharing current priority level
+                eidx = offsets[rel_plevels[i] + 1]
 
-            # Iterate over all objects up to priority level and check against their volumes
-            for j in range(eidx):
-                if (i != j): # Required, since checking all objects with p_j <= p_i
-                    check_against = np.logical_not(
-                        self.objects[j].checkIfInterior(ob.atoms))
-                    check = np.logical_and(check, check_against)
+                # Iterate over all objects up to priority level and check against their volumes
+                for j in range(eidx):
+                    if (i != j): # Required, since checking all objects with p_j <= p_i
+                        check_against = np.logical_not(
+                            self.objects[j].checkIfInterior(ob.atoms))
+                        check = np.logical_and(check, check_against)
 
             self._checks.append(check)
 
     def populate_no_collisions(self):
         """Populate the scene without checking for object overlap. Use only if known by construction
             that objects have no intersection."""
-        for ob in self.objects:
-            ob.populate_atoms()
-        
-        self._checks = []
-        for i, ob in enumerate(self.objects):
-            check = np.ones(ob.atoms.shape[0]).astype(bool)
-            self._checks.append(check)
+        self.populate(check_collisions=False)
 
 
 class PeriodicScene(BaseScene):
