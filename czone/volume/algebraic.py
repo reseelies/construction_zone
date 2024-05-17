@@ -197,6 +197,7 @@ class Plane(BaseAlgebraic):
 
         """
         # separate into two dot products to avoid an an array subtraction against testPoints
+        point = point.reshape(-1, 3)
         return np.dot(point, self.normal) - np.dot(self.point, self.normal)
 
     def dist_from_plane(self, point: np.ndarray):
