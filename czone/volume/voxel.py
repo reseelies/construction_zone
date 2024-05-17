@@ -30,6 +30,9 @@ class Voxel():
         self.scale = scale
         self.origin = origin
 
+    def __repr__(self):
+        return f"Voxel(bases={self.bases}, scale={self.scale}, origin={self.origin})"
+
     @property
     def scale(self):
         """Scaling factor of basis set."""
