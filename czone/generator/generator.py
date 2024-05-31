@@ -418,7 +418,8 @@ class AmorphousGenerator(BaseGenerator):
         else:
             coords = gen_p_substrate(
                 np.max(bbox, axis=0) - np.min(bbox, axis=0), self.min_dist, self.density, **kwargs)
-            self._old_result = (coords, np.ones(coords.shape[0]) * self.species)
+            
+            self._old_result = (coords + np.min(bbox, axis=0), np.ones(coords.shape[0]) * self.species)
             return self.old_result
 
 
