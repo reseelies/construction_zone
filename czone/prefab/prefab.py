@@ -170,7 +170,7 @@ class fccMixedTwinSF(BasePrefab):
                                    self.generator,
                                    self.plane,
                                    mode="ceil")
-        d_tot = ep.dist_from_plane(sp.point)
+        d_tot = ep.dist_from_plane(sp.point)[0]
         d_hkl = self.generator.lattice.d_hkl(self.plane)
         N_planes = np.round(d_tot / d_hkl).astype(int)
         planes = [sp]
