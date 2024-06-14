@@ -158,5 +158,46 @@ class Test_Classes(czone_TestCase):
             self.assertArrayEqual(ref_volume.species, test_volume.species)
 
     def test_fccMixedTwinSF(self):
-        pass
+        generator = Generator.from_spacegroup([6], np.zeros((1,3)), [2, 2, 2], [90, 90, 90], sgn=225)
+        volume = Volume(alg_objects=Sphere(10, np.zeros(3)))
+
+        N_trials = 32
+        for _ in range(N_trials):
+            seed = base_rng.integers(0,int(1e6))
+            ref_rng = np.random.default_rng(seed=seed)
+            test_rng = np.random.default_rng(seed=seed)
+
+            ref_fab = fccMixedTwinSF(generator, volume, rng=ref_rng)
+            test_fab = fccMixedTwinSF(generator, volume, rng=test_rng)
+
+            ref_obj = ref_fab.build_object()
+            ref_obj.populate_atoms()
+
+            test_obj = test_fab.build_object()
+            test_obj.populate_atoms()
+
+            self.assertArrayEqual(ref_obj.atoms, test_obj.atoms)
+            self.assertArrayEqual(ref_obj.species, test_obj.species)
+
+    def test_wurtziteStackingFault(self):
+        generator = Generator.from_spacegroup([6], np.zeros((1,3)), [2, 2, 3], [90, 90, 120], sgn=186)
+        volume = Volume(alg_objects=Sphere(10, np.zeros(3)))
+
+        N_trials = 32
+        for _ in range(N_trials):
+            seed = base_rng.integers(0,int(1e6))
+            ref_rng = np.random.default_rng(seed=seed)
+            test_rng = np.random.default_rng(seed=seed)
+
+            ref_fab = wurtziteStackingFault(generator, volume, rng=ref_rng)
+            test_fab = wurtziteStackingFault(generator, volume, rng=test_rng)
+
+            ref_obj = ref_fab.build_object()
+            ref_obj.populate_atoms()
+
+            test_obj = test_fab.build_object()
+            test_obj.populate_atoms()
+
+            self.assertArrayEqual(ref_obj.atoms, test_obj.atoms)
+            self.assertArrayEqual(ref_obj.species, test_obj.species)
 

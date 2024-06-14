@@ -8,7 +8,7 @@ from ..generator import Generator
 from ..transform import *
 from ..util.misc import get_N_splits
 from ..volume import BaseVolume, MultiVolume, Volume
-from ..volume.algebraic import Plane, snap_plane_near_point
+from ..volume.algebraic import Sphere, Plane, snap_plane_near_point
 
 
 class BasePrefab(ABC):
@@ -30,6 +30,19 @@ class BasePrefab(ABC):
     def build_object(self) -> BaseVolume:
         """Construct and return a prefabicated structure."""
         pass
+
+    @property
+    def rng(self):
+        """Random number generator associated with Prefab"""
+        return self._rng
+    
+    @rng.setter
+    def rng(self, new_rng : np.random.BitGenerator):
+        if not isinstance(new_rng, np.random.Generator):
+            raise TypeError("Must supply a valid Numpy Generator")
+        
+        self._rng = new_rng
+
 
 
 class fccMixedTwinSF(BasePrefab):
@@ -61,7 +74,8 @@ class fccMixedTwinSF(BasePrefab):
                  ratio: float = 0.5,
                  N: int = 1,
                  min_sep: int = 3,
-                 plane: Tuple[int] = (1, 1, 1)):
+                 plane: Tuple[int] = (1, 1, 1),
+                 rng=None):
         self._N = None
         self._plane = None
         self._ratio = None
@@ -74,11 +88,13 @@ class fccMixedTwinSF(BasePrefab):
         self.ratio = ratio
         self.min_sep = min_sep
 
-        if not generator is None:
+        if generator is not None:
             self.generator = generator
 
-        if not volume is None:
+        if volume is not None:
             self.volume = volume
+
+        self.rng = np.random.default_rng() if rng is None else rng
 
     @property
     def N(self):
@@ -180,7 +196,7 @@ class fccMixedTwinSF(BasePrefab):
             planes.append(Plane(normal=sp.normal, point=new_point))
 
         # select N planes with min separation apart
-        splits = get_N_splits(self.N, self.min_sep, len(planes))
+        splits = get_N_splits(self.N, self.min_sep, len(planes), rng=self.rng)
         splits.reverse()
 
         # create sub volumes for final multivolume
@@ -192,7 +208,7 @@ class fccMixedTwinSF(BasePrefab):
 
         defect_types = {"twin":False, "stacking_fault":False}
         for i in range(self.N):
-            if (np.random.rand() < self.ratio):
+            if (self.rng.uniform() < self.ratio):
                 # add stacking fault
                 burger = twin_last * gen_tmp.voxel.sbases @ (
                     (1 / 3) * np.array([1, 1, -2]) * np.sign(self.plane))
@@ -321,7 +337,8 @@ class wurtziteStackingFault(BasePrefab):
                  generator: Generator = None,
                  volume: BaseVolume = None,
                  N: int = 1,
-                 min_sep: int = 6):
+                 min_sep: int = 6,
+                 rng = None):
         self._N = None
         self._min_sep = None
         self._generator = None
@@ -330,11 +347,13 @@ class wurtziteStackingFault(BasePrefab):
         self.N = N
         self.min_sep = min_sep
 
-        if not generator is None:
+        if generator is not None:
             self.generator = generator
 
-        if not volume is None:
+        if volume is not None:
             self.volume = volume
+
+        self.rng = np.random.default_rng() if rng is None else rng
 
     @property
     def N(self):
@@ -421,7 +440,7 @@ class wurtziteStackingFault(BasePrefab):
             planes.append(Plane(normal=sp.normal, point=new_point))
 
         # select N planes with min separation apart
-        splits = get_N_splits(self.N, self.min_sep, len(planes))
+        splits = get_N_splits(self.N, self.min_sep, len(planes), rng=self.rng)
         splits.reverse()
 
         # create sub volumes for final multivolume
