@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from czone.generator import (
+    Generator,
     AmorphousGenerator,
     gen_p_substrate,
     gen_p_substrate_batched,
@@ -14,6 +15,7 @@ from czone.surface import (
     alpha_shape_alg_3D_with_sampling,
     find_approximate_normal,
 )
+from czone.transform import ChemicalSubstitution
 from czone.util.misc import get_N_splits
 from czone.volume import Sphere, Volume
 
@@ -115,8 +117,9 @@ class Test_Functions(czone_TestCase):
         
     
 class Test_Classes(czone_TestCase):
-    def test_AmorphousGenerator(self):      
-        for _ in range(10):
+    def test_AmorphousGenerator(self):
+        N_trials = 10
+        for _ in range(N_trials):
             seed = base_rng.integers(0, int(1e6))
             rng = np.random.default_rng(seed=seed)
             ref_volume = Volume(alg_objects=Sphere(10, np.zeros(3)),
@@ -135,4 +138,21 @@ class Test_Classes(czone_TestCase):
             self.assertArrayEqual(ref_volume.species, test_volume.species)
 
 
+    def test_ChemicalSubstitution(self):
+        test_generator = Generator.from_spacegroup([6], np.zeros((1,3)), [1, 1, 1], [90, 90, 90], sgn=225)
+        ref_volume = Volume(alg_objects=Sphere(10, np.zeros(3)),
+                             generator=test_generator)
+        test_volume = ref_volume.from_volume()
+
+        N_trials = 32
+        for _ in range(N_trials):
+            seed = base_rng.integers(0,int(1e6))
+            ref_rng = np.random.default_rng(seed=seed)
+            test_rng = np.random.default_rng(seed=seed)
+            ref_volume.generator.post_transform = ChemicalSubstitution({6:8}, 0.1, rng=ref_rng)
+            test_volume.generator.post_transform = ChemicalSubstitution({6:8}, 0.1, rng=test_rng)
+
+            ref_volume.populate_atoms()
+            test_volume.populate_atoms()
+            self.assertArrayEqual(ref_volume.species, test_volume.species)            
 
