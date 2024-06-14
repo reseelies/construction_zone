@@ -48,7 +48,7 @@ def sparse_matrix_from_tri(simplices):
 
     return csr_matrix(mat)
 
-def find_approximate_normal(points, decay=0.99, tol=1e-5, margin=0, seed=23, max_steps=1000, **kwargs):
+def find_approximate_normal(points, decay=0.99, tol=1e-5, margin=0, max_steps=1000, rng=np.random.default_rng(), **kwargs):
     """Use modified perception algorithm to find approximate surface normal to set of points.
     
     Assumes points come from local section of alpha-shape, i.e, they are bounded
@@ -66,8 +66,6 @@ def find_approximate_normal(points, decay=0.99, tol=1e-5, margin=0, seed=23, max
     Returns:
         np.ndarray: (3,) normalized vector representing orientation of surface normal
     """
-
-    rng = np.random.default_rng(seed=seed)
 
     A = points # use matrix notation
 
@@ -245,8 +243,7 @@ def add_adsorbate(mol: BaseMolecule,
     best_margin = 0
     j = 0
     while(j < 10):
-        cur_seed = rng.integers(0,10000,1)[0]
-        w = find_approximate_normal(nn_pos, decay=0.95, tol=1e-4, margin=best_margin, seed=cur_seed)
+        w = find_approximate_normal(nn_pos, decay=0.95, tol=1e-4, margin=best_margin, rng=rng)
 
         margins = []
         for b in nn_pos:

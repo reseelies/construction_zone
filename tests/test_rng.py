@@ -2,6 +2,7 @@ import unittest
 import numpy as np
 
 from czone.util.misc import get_N_splits
+from czone.surface.adsorbate import find_approximate_normal
 
 """
 These unit tests are not meant to measure code functionality/correctness.
@@ -17,6 +18,10 @@ class Test_Functions(unittest.TestCase):
     def setUp(self):
         self.N_trials = 32
 
+    def assertArrayEqual(self, first, second, msg=None) -> None:
+        "Fail if the two arrays are unequal by via Numpy's array_equal method."
+        self.assertTrue(np.array_equal(first, second), msg=msg)
+
     def assertConsistent(self, F, args, seed):        
         # seed rng and get reference result
         rng = np.random.default_rng(seed)
@@ -26,7 +31,12 @@ class Test_Functions(unittest.TestCase):
         # reset RNG state and call function again
         rng.bit_generator.state = ref_state
         test_res = F(*args, rng=rng)
-        self.assertEqual(ref_res, test_res)
+
+        match test_res:
+            case np.ndarray():
+                self.assertArrayEqual(ref_res, test_res)
+            case _:
+                self.assertEqual(ref_res, test_res)
 
     def test_get_N_splits(self):
         L = 32
@@ -35,6 +45,15 @@ class Test_Functions(unittest.TestCase):
         for _ in range(self.N_trials):
             seed = base_rng.integers(0, int(1e6))
             self.assertConsistent(get_N_splits, (N, M, L), seed)
+
+    def test_find_approximate_normal(self):
+
+        points = base_rng.normal(size=(100,3))
+        z_filter = points[:,2] <= 0
+        test_points = points[z_filter, :]
+        for _ in range(self.N_trials):
+            seed = base_rng.integers(0, int(1e6))
+            self.assertConsistent(find_approximate_normal, (test_points,), seed)
 
 
     
