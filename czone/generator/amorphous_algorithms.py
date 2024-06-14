@@ -73,7 +73,7 @@ def gen_p_substrate(dims: List[float],
                     min_dist: float = 1.4,
                     density=.1103075,
                     print_progress=False,
-                    seed=0):
+                    rng=np.random.default_rng()):
     """Generate a uniformly random distributed collection of atoms with PBC.
 
     Given the size of a rectangular prism, a minimum bond distance, and a target
@@ -104,7 +104,6 @@ def gen_p_substrate(dims: List[float],
     """
 
     # get number of carbon atoms to generate
-    rng = np.random.default_rng(seed=seed)
     dims = np.array(dims)
     min_dist_2 = min_dist**2.0
     dim_x = dims[0]
@@ -163,9 +162,7 @@ def gen_p_substrate_batched(dims: List[float],
                     print_progress=False,
                     voxel_scale = 2.0,
                     batch_size = 16,
-                    seed = 0):
-
-    rng = np.random.default_rng(seed=seed)
+                    rng=np.random.default_rng()):
 
     # get number of carbon atoms to generate
     dims = np.array(dims)

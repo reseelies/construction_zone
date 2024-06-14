@@ -3,6 +3,10 @@ import unittest
 import numpy as np
 import pytest
 
+from czone.generator.amorphous_algorithms import (
+    gen_p_substrate,
+    gen_p_substrate_batched,
+)
 from czone.molecule import Molecule
 from czone.surface import (
     add_adsorbate,
@@ -93,6 +97,20 @@ class Test_Functions(unittest.TestCase):
         for _ in range(self.N_trials):
             seed = base_rng.integers(0, int(1e6))
             self.assertConsistent(alpha_shape_alg_3D_with_sampling, (test_points, probe_radius, N_samples), seed)
+
+    def test_gen_p_substrate(self):
+        dims = (20,20,20)
+
+        for _ in range(self.N_trials):
+            seed = base_rng.integers(0, int(1e6))
+            self.assertConsistent(gen_p_substrate, (dims,), seed)
+
+    def test_gen_p_substrate_batched(self):
+        dims = (20,20,20)
+
+        for _ in range(self.N_trials):
+            seed = base_rng.integers(0, int(1e6))
+            self.assertConsistent(gen_p_substrate_batched, (dims,), seed)
         
     
 class Test_Classes(unittest.TestCase):
