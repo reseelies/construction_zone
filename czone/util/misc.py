@@ -16,7 +16,7 @@ def round_away(x: float) -> float:
     return np.sign(x) * np.ceil(np.abs(x))
 
 
-def get_N_splits(n: int, m: int, l: int, seed: int = None) -> List[int]:
+def get_N_splits(n: int, m: int, l: int, rng = np.random.default_rng()) -> List[int]:
     """Get N uniform random integers in interval [M,L-M) with separation M.
 
     Args:
@@ -33,9 +33,8 @@ def get_N_splits(n: int, m: int, l: int, seed: int = None) -> List[int]:
         
     if (l - 2 * m < (n - 1) * m):
         raise ValueError("m is too large for number of splits requested and l")
-    rng = np.random.default_rng(seed=seed)
 
-    #seed an initial choice and create array to calculate distances in
+    # seed an initial choice and create array to calculate distances in
     splits = [rng.integers(m, l - m)]
     data = np.array([x for x in range(m, l - m)])
     idx = np.ma.array(data=data, mask=np.abs(data - splits[-1]) < m)
