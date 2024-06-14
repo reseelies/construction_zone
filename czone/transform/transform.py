@@ -123,9 +123,7 @@ class Translation(BaseTransform):
 
     @shift.setter
     def shift(self, shift):
-        shift = np.array(shift)
-        assert (shift.size == 3), "Shift must be a vector in 3D space"
-        assert (shift.shape[0] == 3), "Shift must be a vector in 3D space"
+        shift = np.array(shift).reshape(3)
         self._shift = shift
 
     @property

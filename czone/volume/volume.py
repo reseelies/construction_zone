@@ -19,7 +19,7 @@ from .algebraic import get_bounding_box as get_bounding_box_planes
 
 class BaseVolume(ABC):
     """Base abstract class for Volume objects.
-    
+
     Volume objects are subtractive components in Construction Zone. When designing
     nanostructures, Volumes contain information about where atoms should and
     should not be placed. Semantically, volumes can be thought of as singular
@@ -78,13 +78,13 @@ class BaseVolume(ABC):
 
     @abstractmethod
     def populate_atoms(self):
-        """Fill volume with atoms. """
+        """Fill volume with atoms."""
         pass
 
     @abstractmethod
     def checkIfInterior(self, testPoints: np.ndarray):
         """Check points to see if they lie in interior of volume.
-        
+
         Returns:
             Logical array indicating which points lie inside the volume.
         """
@@ -106,17 +106,17 @@ class BaseVolume(ABC):
 
 class Volume(BaseVolume):
     """Volume object for representing convex spaces.
-    
+
     Volume objects are subtractive components in Construction Zone. When designing
     nanostructures, Volumes contain information about where atoms should and
     should not be placed. Semantically, volumes can be thought of as singular
     objects in space. In order to supply atoms, Volumes must be given a Generator.
 
-    Volumes can be created with a series of points in space, in which the 
+    Volumes can be created with a series of points in space, in which the
     interior of the volume is taken as the convex hull of the points in space.
     They can also be created with a series of algebraic surfaces, such as planes
     and spheres. Both points and algebraic objects can be used to define a Volume,
-    in which the interior of the Volume is taken as the intersection of the 
+    in which the interior of the Volume is taken as the intersection of the
     interior region defined by the convex hull of the points and the interior
     regions of the algebraic objects.
 
@@ -132,13 +132,15 @@ class Volume(BaseVolume):
         priority (int): Relative generation precedence of volume.
     """
 
-    def __init__(self,
-                 points: np.ndarray = None,
-                 alg_objects: np.ndarray = None,
-                 generator: BaseGenerator = None,
-                 priority: int = 0,
-                 tolerance: float = 1e-10,
-                 **kwargs):
+    def __init__(
+        self,
+        points: np.ndarray = None,
+        alg_objects: np.ndarray = None,
+        generator: BaseGenerator = None,
+        priority: int = 0,
+        tolerance: float = 1e-10,
+        **kwargs,
+    ):
         self._points = None
         self._hull = None
         self._generator = None
@@ -149,15 +151,13 @@ class Volume(BaseVolume):
         self._tolerance = tolerance
 
         if not (points is None):
-            #expect 2D array with Nx3 points
-            assert (len(
-                points.shape) == 2), "points must be N x 3 numpy array (x,y,z)"
-            assert (points.shape[1] == 3
-                   ), "points must be N x 3 numpy array (x,y,z)"
+            # expect 2D array with Nx3 points
+            assert len(points.shape) == 2, "points must be N x 3 numpy array (x,y,z)"
+            assert points.shape[1] == 3, "points must be N x 3 numpy array (x,y,z)"
             self.addPoints(points)
 
         if not (generator is None):
-            if 'gen_origin' in kwargs:
+            if "gen_origin" in kwargs:
                 self.add_generator(generator, kwargs["gen_origin"])
             else:
                 self.add_generator(generator)
@@ -179,7 +179,7 @@ class Volume(BaseVolume):
     @points.setter
     def points(self, points):
         try:
-            self._points = None #clear points
+            self._points = None  # clear points
             self.addPoints(points)
         except AssertionError:
             raise ValueError("Check shape of input array.")
@@ -191,7 +191,7 @@ class Volume(BaseVolume):
 
     def add_alg_object(self, obj: BaseAlgebraic):
         """Add an algebraic surface to the volume.
-        
+
         Args:
             obj (BaseAlgebraic): Algebraic surface to add to volume.
         """
@@ -227,10 +227,10 @@ class Volume(BaseVolume):
     def tolerance(self):
         """Numerical tolerance for simplex checking with convex hulls. Defaults to 1e-10"""
         return self._tolerance
-    
+
     @tolerance.setter
     def tolerance(self, val):
-        assert(isinstance(val, float))
+        assert isinstance(val, float)
         self._tolerance = val
 
     def add_generator(self, generator, origin=None):
@@ -251,9 +251,8 @@ class Volume(BaseVolume):
 
     def createHull(self):
         """Create convex hull from points defining volume boundaries."""
-        #check to make sure there are N>3 points in point list
-        assert (self.points.shape[0] >
-                3), "must have more than 3 points to create hull"
+        # check to make sure there are N>3 points in point list
+        assert self.points.shape[0] > 3, "must have more than 3 points to create hull"
         self._hull = ConvexHull(self.points, incremental=True)
         self._tri = Delaunay(self.hull.points[self.hull.vertices])
 
@@ -263,31 +262,29 @@ class Volume(BaseVolume):
         Args:
             points (np.ndarray): Nx3 array of points to add to hull.
         """
-        assert (
-            points.shape[-1] == 3), "points must be N x 3 numpy array (x,y,z)"
-        assert (len(points.shape) <
-                3), "points must be N x 3 numpy array (x,y,z)"
+        assert points.shape[-1] == 3, "points must be N x 3 numpy array (x,y,z)"
+        assert len(points.shape) < 3, "points must be N x 3 numpy array (x,y,z)"
 
-        if (self._points is None):
+        if self._points is None:
             self._points = np.copy(points)
-            if len(points.shape) == 1:  #add dim if only single new point
+            if len(points.shape) == 1:  # add dim if only single new point
                 self._points = np.expand_dims(points)
         else:
-            if len(points.shape) == 1:  #check for single point
+            if len(points.shape) == 1:  # check for single point
                 points = np.expand_dims(points, axis=0)
 
             self._points = np.append(self._points, points, axis=0)
 
-        #if hull created, update points; else, create hull
+        # if hull created, update points; else, create hull
         try:
             self._hull.add_points(points)
         except AttributeError:
             self.createHull()
 
     def transform(self, transformation: BaseTransform):
-
-        assert (isinstance(transformation, BaseTransform)
-               ), "Supplied transformation not transformation object."
+        assert isinstance(
+            transformation, BaseTransform
+        ), "Supplied transformation not transformation object."
 
         if not (self.points is None):
             self.points = transformation.applyTransformation(self.points)
@@ -295,26 +292,23 @@ class Volume(BaseVolume):
 
         if len(self.alg_objects) > 0:
             for i, obj in enumerate(self.alg_objects):
-                self.alg_objects[i] = transformation.applyTransformation_alg(
-                    obj)
+                self.alg_objects[i] = transformation.applyTransformation_alg(obj)
 
         if transformation.locked and (not (self.generator is None)):
             self.generator.transform(transformation)
 
     def checkIfInterior(self, testPoints: np.ndarray):
-        assert (testPoints.shape[-1] == 3
-               ), "testPoints must be N x 3 numpy array (x,y,z)"
-        assert (len(testPoints.shape) <
-                3), "testPoints must be N x 3 numpy array (x,y,z)"
-        if (len(testPoints.shape) == 1):
+        assert testPoints.shape[-1] == 3, "testPoints must be N x 3 numpy array (x,y,z)"
+        assert len(testPoints.shape) < 3, "testPoints must be N x 3 numpy array (x,y,z)"
+        if len(testPoints.shape) == 1:
             testPoints = np.expand_dims(testPoints, axis=0)
 
         check = np.ones(testPoints.shape[0]).astype(bool)
 
         if not self.tri is None:
             check = np.logical_and(
-                check,
-                self.tri.find_simplex(testPoints, tol=self.tolerance) >= 0)
+                check, self.tri.find_simplex(testPoints, tol=self.tolerance) >= 0
+            )
 
         if len(self.alg_objects) > 0:
             for obj in self.alg_objects:
@@ -324,7 +318,7 @@ class Volume(BaseVolume):
 
     def get_bounding_box(self):
         """Get some minimal bounding box defining extremities of regions.
-        
+
         Returns:
             Nx3 array of points defining extremities of region enclosed by volume.
         """
@@ -335,9 +329,7 @@ class Volume(BaseVolume):
             # Then, gather planes and check if valid intersection exists
             # Then, look for spheres
             # To improve, check all objects and select smalllest bounding box
-            spheres = [
-                obj for obj in self.alg_objects if isinstance(obj, Sphere)
-            ]
+            spheres = [obj for obj in self.alg_objects if isinstance(obj, Sphere)]
             if len(spheres) > 0:
                 s_idx = sorted(range(len(spheres)), key=lambda i: spheres[i].radius)[0]
                 d = 2 * spheres[s_idx].radius
@@ -356,7 +348,6 @@ class Volume(BaseVolume):
                 bbox = cylinders[0].get_bounding_box()
                 return bbox
 
-
     def populate_atoms(self, **kwargs):
         bbox = self.get_bounding_box()
         coords, species = self.generator.supply_atoms(bbox, **kwargs)
@@ -365,20 +356,20 @@ class Volume(BaseVolume):
         self._atoms = coords[check, :]
         self._species = species[check]
 
-    #TODO: let user raise warnings if te object is the same
+    # TODO: let user raise warnings if te object is the same
     def from_volume(self, **kwargs):
         """Constructor for new Volumes based on existing Volume object.
 
         Args:
-            **kwargs: 
+            **kwargs:
                     - transformation=List[BaseTransformation] to apply a series
                      of transfomrations to copied Volume.
                     - generator=BaseGenerator to replace generator associated with volume.
                     - Any kwargs accepted in creation of Volume object.
         """
-        new_volume = Volume(points=self.points,
-                            alg_objects=self.alg_objects,
-                            priority=self.priority)
+        new_volume = Volume(
+            points=self.points, alg_objects=self.alg_objects, priority=self.priority
+        )
         if "generator" in kwargs.keys():
             new_volume.add_generator(kwargs["generator"])
         else:
@@ -400,7 +391,7 @@ class MultiVolume(BaseVolume):
     objects in space. In order to supply atoms, Volumes must be given a Generator.
 
     MultiVolumes group multiple Volume objects together into a single semantic object.
-    Within the MultiVolume, Volume intersection is handled with relative precedence levels, 
+    Within the MultiVolume, Volume intersection is handled with relative precedence levels,
     analagous to the precedence relationships that are used to handle conflict
     resolution between Volumes in scenes. Transformations applied to a MultiVolume
     are applied to every owned volume. MultiVolumes can be nested.
@@ -429,18 +420,16 @@ class MultiVolume(BaseVolume):
 
     def add_volume(self, volume: BaseVolume):
         """Add volume to MultiVolume.
-        
+
         Args:
             volume (BaseVolume): Volume object to add to MultiVolume.
         """
-        if hasattr(volume, '__iter__'):
+        if hasattr(volume, "__iter__"):
             for v in volume:
-                assert (isinstance(
-                    v, BaseVolume)), "volumes must be volume objects"
+                assert isinstance(v, BaseVolume), "volumes must be volume objects"
             self._volumes.extend(volume)
         else:
-            assert (isinstance(volume,
-                               BaseVolume)), "volumes must be volume objects"
+            assert isinstance(volume, BaseVolume), "volumes must be volume objects"
             self._volumes.append(volume)
 
     def _get_priorities(self):
@@ -468,18 +457,17 @@ class MultiVolume(BaseVolume):
         return rel_plevels, offsets
 
     def transform(self, transformation: BaseTransform):
-        assert (isinstance(transformation, BaseTransform)
-               ), "Supplied transformation not transformation object."
+        assert isinstance(
+            transformation, BaseTransform
+        ), "Supplied transformation not transformation object."
 
         for vol in self.volumes:
             vol.transform(transformation)
 
     def checkIfInterior(self, testPoints: np.ndarray):
-        assert (testPoints.shape[-1] == 3
-               ), "testPoints must be N x 3 numpy array (x,y,z)"
-        assert (len(testPoints.shape) <
-                3), "testPoints must be N x 3 numpy array (x,y,z)"
-        if (len(testPoints.shape) == 1):
+        assert testPoints.shape[-1] == 3, "testPoints must be N x 3 numpy array (x,y,z)"
+        assert len(testPoints.shape) < 3, "testPoints must be N x 3 numpy array (x,y,z)"
+        if len(testPoints.shape) == 1:
             testPoints = np.expand_dims(testPoints, axis=0)
 
         check = np.zeros(testPoints.shape[0]).astype(bool)
@@ -490,7 +478,7 @@ class MultiVolume(BaseVolume):
         return check
 
     def populate_atoms(self):
-        #routine is modified form of scene atom population
+        # routine is modified form of scene atom population
         for vol in self.volumes:
             vol.populate_atoms()
 
@@ -503,17 +491,26 @@ class MultiVolume(BaseVolume):
             eidx = offsets[rel_plevels[i] + 1]
 
             for j in range(eidx):
-                if (i != j):
+                if i != j:
                     check_against = np.logical_not(
-                        self.volumes[j].checkIfInterior(vol.atoms))
+                        self.volumes[j].checkIfInterior(vol.atoms)
+                    )
                     check = np.logical_and(check, check_against)
 
             checks.append(check)
 
         self._atoms = np.vstack(
-            [vol.atoms[checks[i], :] for i, vol in enumerate(self.volumes)])
+            [vol.atoms[checks[i], :] for i, vol in enumerate(self.volumes)]
+        )
         self._species = np.hstack(
-            [vol.species[checks[i]] for i, vol in enumerate(self.volumes)])
+            [vol.species[checks[i]] for i, vol in enumerate(self.volumes)]
+        )
+
+    def get_bounding_box(self):
+        """Return union of bounding boxes. TODO: Update to convex hull"""
+
+        bboxes = np.concatenate([vol.get_bounding_box() for vol in self.volumes])
+        return bboxes
 
     def from_volume(self, **kwargs):
         """Constructor for new MultiVolume based on existing MultiVolume object.
@@ -521,7 +518,7 @@ class MultiVolume(BaseVolume):
         **kwargs passed to volume are applied to every owned Volume individually.
 
         Args:
-            **kwargs: 
+            **kwargs:
                     - transformation=List[BaseTransformation] to apply a series
                      of transfomrations to copied Volume.
                     - generator=BaseGenerator to replace generator associated with volume.
@@ -547,21 +544,31 @@ def makeRectPrism(a, b, c, center=None):
         b (float): dimension of prism along y
         c (float): dimension of prism along z
         center (np.ndarray): center of prism, default None. If None, corner of
-                            prism is at origin. Else, prism is translated to 
+                            prism is at origin. Else, prism is translated to
                             have midpoint at center.
 
     Returns:
         8x3 numpy array of 8 points defining a rectangular prism in space.
     """
-    points = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 0],
-                       [1, 0, 1], [0, 1, 1], [1, 1, 1]],
-                      dtype=np.float64)
-    #stretch unit cube
+    points = np.array(
+        [
+            [0, 0, 0],
+            [1, 0, 0],
+            [0, 1, 0],
+            [0, 0, 1],
+            [1, 1, 0],
+            [1, 0, 1],
+            [0, 1, 1],
+            [1, 1, 1],
+        ],
+        dtype=np.float64,
+    )
+    # stretch unit cube
     points *= np.squeeze(np.array([a, b, c]))
 
     if center is None:
         return points
     else:
-        #translate prism to desired center if specified
+        # translate prism to desired center if specified
         cur_center = np.mean(points, axis=0)
         return points + (center - cur_center)
