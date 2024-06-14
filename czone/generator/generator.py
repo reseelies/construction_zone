@@ -344,7 +344,7 @@ class AmorphousGenerator(BaseGenerator):
 
     """
 
-    def __init__(self, origin=None, min_dist=1.4, density=.1103075, species=6):
+    def __init__(self, origin=None, min_dist=1.4, density=.1103075, species=6, rng=np.random.default_rng()):
         self._origin = None
         self._species = None
         self._density = None
@@ -358,6 +358,7 @@ class AmorphousGenerator(BaseGenerator):
         self.min_dist = min_dist
         self.density = density
         self.use_old_result = False
+        self.rng = rng
 
     """
     Properties
@@ -408,6 +409,19 @@ class AmorphousGenerator(BaseGenerator):
         """Atomic coordinates of previous generation, if supply atoms has been called."""
         return self._old_result
 
+    @property
+    def rng(self):
+        """Random number generator associated with Generator"""
+        return self._rng
+    
+    @rng.setter
+    def rng(self, new_rng : np.random.BitGenerator):
+        if not isinstance(new_rng, np.random.Generator):
+            raise TypeError("Must supply a valid Numpy Generator")
+        
+        self._rng = new_rng
+
+
     """
     Methods
     """
@@ -416,8 +430,9 @@ class AmorphousGenerator(BaseGenerator):
         if self.use_old_result and self._old_result is not None:
             return self.old_result
         else:
+            #TODO: switch to batching/add a flag to control whether or not to batch generation
             coords = gen_p_substrate(
-                np.max(bbox, axis=0) - np.min(bbox, axis=0), self.min_dist, self.density, **kwargs)
+                np.max(bbox, axis=0) - np.min(bbox, axis=0), self.min_dist, self.density, rng=self.rng, **kwargs)
             self._old_result = (coords, np.ones(coords.shape[0]) * self.species)
             return self.old_result
 
@@ -429,7 +444,7 @@ class NullGenerator(BaseGenerator):
     nanostructures, Generators contain information about the arrangement of atoms
     in space and can supply atoms at least where they should exist. 
 
-    The NulLGenerator object handles empty space.
+    The NullGenerator object handles empty space.
     """
 
     def __init__(self):

@@ -3,7 +3,8 @@ import unittest
 import numpy as np
 import pytest
 
-from czone.generator.amorphous_algorithms import (
+from czone.generator import (
+    AmorphousGenerator,
     gen_p_substrate,
     gen_p_substrate_batched,
 )
@@ -25,16 +26,16 @@ completely reproduced by passing the RNG in as a property/argument.
 seed = 9871492
 base_rng = np.random.default_rng(seed=seed)
 
-
-class Test_Functions(unittest.TestCase):
-    def setUp(self):
-        self.N_trials = 32
-
+class czone_TestCase(unittest.TestCase):
     def assertArrayEqual(self, first, second, msg=None) -> None:
         "Fail if the two arrays are unequal by via Numpy's array_equal method."
         self.assertTrue(np.array_equal(first, second), msg=msg)
 
-    def assertConsistent(self, F, args, seed):        
+class Test_Functions(czone_TestCase):
+    def setUp(self):
+        self.N_trials = 32
+
+    def assertConsistent(self, F, args, seed):
         # seed rng and get reference result
         rng = np.random.default_rng(seed)
         ref_state = rng.bit_generator.state # cache state to reseed rng
@@ -113,8 +114,25 @@ class Test_Functions(unittest.TestCase):
             self.assertConsistent(gen_p_substrate_batched, (dims,), seed)
         
     
-class Test_Classes(unittest.TestCase):
-    def setUp(self):
-        self.N_trials = 32
+class Test_Classes(czone_TestCase):
+    def test_AmorphousGenerator(self):      
+        for _ in range(10):
+            seed = base_rng.integers(0, int(1e6))
+            rng = np.random.default_rng(seed=seed)
+            ref_volume = Volume(alg_objects=Sphere(10, np.zeros(3)),
+                                generator=AmorphousGenerator(rng=rng))
+            
+            test_volume = ref_volume.from_volume()
+
+            self.assertNotEqual(id(ref_volume.generator.rng), id(test_volume.generator.rng))
+            self.assertEqual(ref_volume.generator.rng.bit_generator.state,
+                             test_volume.generator.rng.bit_generator.state,)
+            
+            ref_volume.populate_atoms()
+            test_volume.populate_atoms()
+
+            self.assertArrayEqual(ref_volume.atoms, test_volume.atoms)
+            self.assertArrayEqual(ref_volume.species, test_volume.species)
+
 
 
