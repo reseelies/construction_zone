@@ -23,6 +23,8 @@ from ..transform import rot_v, rot_vtv, Rotation, Translation
 from pymatgen.core import Element
 from scipy.sparse import csr_matrix
 
+import warnings
+
 def sparse_matrix_from_tri(simplices):
     """Convert array of triangulation simplices into sparse matrix (graph).
     
@@ -48,7 +50,7 @@ def sparse_matrix_from_tri(simplices):
 
     return csr_matrix(mat)
 
-def find_approximate_normal(points, decay=0.99, tol=1e-5, margin=0, seed=23, max_steps=1000, **kwargs):
+def find_approximate_normal(points, decay=0.99, tol=1e-5, margin=0, max_steps=1000, rng=None, **kwargs):
     """Use modified perception algorithm to find approximate surface normal to set of points.
     
     Assumes points come from local section of alpha-shape, i.e, they are bounded
@@ -67,7 +69,7 @@ def find_approximate_normal(points, decay=0.99, tol=1e-5, margin=0, seed=23, max
         np.ndarray: (3,) normalized vector representing orientation of surface normal
     """
 
-    rng = np.random.default_rng(seed=seed)
+    rng = np.random.default_rng() if rng is None else rng
 
     A = points # use matrix notation
 
@@ -154,6 +156,7 @@ def add_adsorbate(mol: BaseMolecule,
                   filters={},
                   debug=False,
                   use_sampling=True,
+                  rng=None,
                   **kwargs):
     """Add adsorbate onto surface of a given volume.
 
@@ -178,23 +181,21 @@ def add_adsorbate(mol: BaseMolecule,
         Adsorbate molecule 
     """
 
+    rng = np.random.default_rng() if rng is None else rng
+
     mol_out = mol.from_molecule()
+
+    if volume.atoms is None:
+        warnings.warn("Input Volume has not populated its atoms. Populating now.")
+        volume.populate_atoms()
 
     ##  Find all atoms on surface with alpha shape
     ## TODO: test default probe radius from RDF measurement
-
-    if "seed" in kwargs.keys():
-        seed = kwargs["seed"]
-    else:
-        seed = np.random.randint(0,10000)
-
-    rng = np.random.default_rng(seed=seed)
 
     if use_sampling:
         surface_ind, shape_dict = alpha_shape_alg_3D_with_sampling(points=volume.atoms, 
                                                     probe_radius=probe_radius,
                                                     N_samples=20,
-                                                    seed=seed,
                                                     rng=rng,
                                                     return_alpha_shape=True)
     else:
@@ -245,8 +246,7 @@ def add_adsorbate(mol: BaseMolecule,
     best_margin = 0
     j = 0
     while(j < 10):
-        cur_seed = rng.integers(0,10000,1)[0]
-        w = find_approximate_normal(nn_pos, decay=0.95, tol=1e-4, margin=best_margin, seed=cur_seed)
+        w = find_approximate_normal(nn_pos, decay=0.95, tol=1e-4, margin=best_margin, rng=rng)
 
         margins = []
         for b in nn_pos:

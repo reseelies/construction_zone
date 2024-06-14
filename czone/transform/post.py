@@ -35,20 +35,19 @@ class BasePostTransform(ABC):
 
 class ChemicalSubstitution(BasePostTransform):
 
-    def __init__(self, target, substitute, frac):
-        assert(len(target) == len(substitute))
-        self.target = target
-        self.substitute = substitute
+    def __init__(self, mapping : dict, frac, rng=None):
+        self.target = mapping.keys()
+        self.substitute = mapping.values()
         self.frac = frac
+        self.rng = np.random.default_rng() if rng is None else rng
 
-    def _replace_species(self, species, seed=None):
+    def _replace_species(self, species):
 
         out_species = np.copy(species)
-        rng = np.random.default_rng(seed=seed)
 
         for t, s in zip(self.target, self.substitute):
             t_filter = species == t
-            t_probs = rng.uniform(0,1,size=species.shape)
+            t_probs = self.rng.uniform(0,1,size=species.shape)
 
             out_species[(t_filter) & (t_probs <= self.frac)] = s
 
@@ -56,6 +55,19 @@ class ChemicalSubstitution(BasePostTransform):
 
     def apply_function(self, points: np.ndarray, species: np.ndarray, **kwargs):
         return points, self._replace_species(species, **kwargs)
+        
+    @property
+    def rng(self):
+        """Random number generator associated with Generator"""
+        return self._rng
+    
+    @rng.setter
+    def rng(self, new_rng : np.random.BitGenerator):
+        if not isinstance(new_rng, np.random.Generator):
+            raise TypeError("Must supply a valid Numpy Generator")
+        
+        self._rng = new_rng
+
 
 
 class ArbitraryPostTransform(BasePostTransform):
