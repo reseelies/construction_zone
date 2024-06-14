@@ -18,6 +18,7 @@ from czone.surface import (
 from czone.transform import ChemicalSubstitution
 from czone.util.misc import get_N_splits
 from czone.volume import Sphere, Volume
+from czone.prefab import fccMixedTwinSF, wurtziteStackingFault
 
 """
 These unit tests are not meant to measure code functionality/correctness.
@@ -154,5 +155,8 @@ class Test_Classes(czone_TestCase):
 
             ref_volume.populate_atoms()
             test_volume.populate_atoms()
-            self.assertArrayEqual(ref_volume.species, test_volume.species)            
+            self.assertArrayEqual(ref_volume.species, test_volume.species)
+
+    def test_fccMixedTwinSF(self):
+        pass
 

@@ -344,7 +344,7 @@ class AmorphousGenerator(BaseGenerator):
 
     """
 
-    def __init__(self, origin=None, min_dist=1.4, density=.1103075, species=6, rng=np.random.default_rng()):
+    def __init__(self, origin=None, min_dist=1.4, density=.1103075, species=6, rng=None):
         self._origin = None
         self._species = None
         self._density = None
@@ -358,7 +358,7 @@ class AmorphousGenerator(BaseGenerator):
         self.min_dist = min_dist
         self.density = density
         self.use_old_result = False
-        self.rng = rng
+        self.rng = np.random.default_rng() if rng is None else rng
 
     """
     Properties

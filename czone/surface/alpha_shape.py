@@ -110,7 +110,7 @@ def alpha_shape_alg_3D(points, probe_radius, return_alpha_shape=False):
         return list(set(out_points))
 
 
-def alpha_shape_alg_3D_with_sampling(points, probe_radius, N_samples, std=1e-4, return_alpha_shape=False, rng = np.random.default_rng()):
+def alpha_shape_alg_3D_with_sampling(points, probe_radius, N_samples, std=1e-4, return_alpha_shape=False, rng = None):
     """Use alpha shape algorithm to determine points on exterior of collection of points.
 
     Performs alpha-shape algorithm ##TODO: cite a source here
@@ -122,6 +122,8 @@ def alpha_shape_alg_3D_with_sampling(points, probe_radius, N_samples, std=1e-4, 
     Returns:
         List of indices of points on exterior of surface for given alpha-shape.
     """
+
+    rng = np.random.default_rng() if rng is None else rng
     
     ## Get alpha-shape
     # get delaunay triangulation of points

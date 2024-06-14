@@ -35,11 +35,11 @@ class BasePostTransform(ABC):
 
 class ChemicalSubstitution(BasePostTransform):
 
-    def __init__(self, mapping : dict, frac, rng=np.random.default_rng()):
+    def __init__(self, mapping : dict, frac, rng=None):
         self.target = mapping.keys()
         self.substitute = mapping.values()
         self.frac = frac
-        self.rng = rng
+        self.rng = np.random.default_rng() if rng is None else rng
 
     def _replace_species(self, species):
 
