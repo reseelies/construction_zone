@@ -200,11 +200,13 @@ class Volume(BaseVolume):
         except TypeError:
             ob_iter = iter([obj])
 
+        ob_copies = []
         for ob in ob_iter:
-            if not isinstance(obj, BaseAlgebraic):
+            if not isinstance(ob, BaseAlgebraic):
                 raise TypeError("Must be adding algebraic objects from derived BaseAlgebraic class")
+            ob_copies.append(copy.deepcopy(ob))
             
-        self._alg_objects.append(copy.deepcopy(obj))
+        self._alg_objects.extend(ob_copies)
 
     @property
     def hull(self):
