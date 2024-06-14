@@ -1,8 +1,16 @@
 import unittest
-import numpy as np
 
+import numpy as np
+import pytest
+
+from czone.molecule import Molecule
+from czone.surface import (
+    add_adsorbate,
+    alpha_shape_alg_3D_with_sampling,
+    find_approximate_normal,
+)
 from czone.util.misc import get_N_splits
-from czone.surface.adsorbate import find_approximate_normal
+from czone.volume import Sphere, Volume
 
 """
 These unit tests are not meant to measure code functionality/correctness.
@@ -35,6 +43,10 @@ class Test_Functions(unittest.TestCase):
         match test_res:
             case np.ndarray():
                 self.assertArrayEqual(ref_res, test_res)
+            case (Molecule(), bool()):
+                self.assertArrayEqual(ref_res[0].atoms, test_res[0].atoms)
+                self.assertArrayEqual(ref_res[0].species, test_res[0].species)
+                self.assertEqual(ref_res[1], test_res[1])
             case _:
                 self.assertEqual(ref_res, test_res)
 
@@ -55,7 +67,33 @@ class Test_Functions(unittest.TestCase):
             seed = base_rng.integers(0, int(1e6))
             self.assertConsistent(find_approximate_normal, (test_points,), seed)
 
+    @pytest.mark.filterwarnings("ignore:Requested to transform molecule", 
+                                "ignore:Input Volume has not pop")
+    def test_add_adsorbate(self):
+        ## Initialize test volume
+        surface_atoms= 10*base_rng.normal(size=(256,3))
+        surface_species = np.ones(surface_atoms.shape[0])
 
+        test_volume = Volume(alg_objects=Sphere(10, np.zeros(3)),
+                             generator=Molecule(surface_species, surface_atoms))
+        
+        test_adsorbate = Molecule([1], np.zeros((1,3)))
+
+        test_args = (test_adsorbate, 0, 1.0, test_volume)
+
+        for _ in range(self.N_trials//2):
+            seed = base_rng.integers(0, int(1e6))
+            self.assertConsistent(add_adsorbate, test_args, seed)
+
+    def test_alpha_shape_alg_3D_with_sampling(self):
+        test_points = 10*base_rng.normal(size=(256,3))
+        probe_radius = 1.0
+        N_samples = 4
+
+        for _ in range(self.N_trials):
+            seed = base_rng.integers(0, int(1e6))
+            self.assertConsistent(alpha_shape_alg_3D_with_sampling, (test_points, probe_radius, N_samples), seed)
+        
     
 class Test_Classes(unittest.TestCase):
     def setUp(self):

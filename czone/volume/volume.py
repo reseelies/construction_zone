@@ -164,9 +164,8 @@ class Volume(BaseVolume):
 
         self.priority = priority
 
-        if not (alg_objects is None):
-            for obj in alg_objects:
-                self.add_alg_object(obj)
+        if alg_objects is not None:
+            self.add_alg_object(alg_objects)
 
     """
     Properties
@@ -196,9 +195,15 @@ class Volume(BaseVolume):
         Args:
             obj (BaseAlgebraic): Algebraic surface to add to volume.
         """
-        assert (
-            isinstance(obj, (BaseAlgebraic))
-        ), "Must be adding algebraic objects from derived BaseAlgebraic class"
+        try:
+            ob_iter = iter(obj)
+        except TypeError:
+            ob_iter = iter([obj])
+
+        for ob in ob_iter:
+            if not isinstance(obj, BaseAlgebraic):
+                raise TypeError("Must be adding algebraic objects from derived BaseAlgebraic class")
+            
         self._alg_objects.append(copy.deepcopy(obj))
 
     @property

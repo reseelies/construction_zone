@@ -23,6 +23,8 @@ from ..transform import rot_v, rot_vtv, Rotation, Translation
 from pymatgen.core import Element
 from scipy.sparse import csr_matrix
 
+import warnings
+
 def sparse_matrix_from_tri(simplices):
     """Convert array of triangulation simplices into sparse matrix (graph).
     
@@ -152,6 +154,7 @@ def add_adsorbate(mol: BaseMolecule,
                   filters={},
                   debug=False,
                   use_sampling=True,
+                  rng=np.random.default_rng(),
                   **kwargs):
     """Add adsorbate onto surface of a given volume.
 
@@ -178,21 +181,17 @@ def add_adsorbate(mol: BaseMolecule,
 
     mol_out = mol.from_molecule()
 
+    if volume.atoms is None:
+        warnings.warn("Input Volume has not populated its atoms. Populating now.")
+        volume.populate_atoms()
+
     ##  Find all atoms on surface with alpha shape
     ## TODO: test default probe radius from RDF measurement
-
-    if "seed" in kwargs.keys():
-        seed = kwargs["seed"]
-    else:
-        seed = np.random.randint(0,10000)
-
-    rng = np.random.default_rng(seed=seed)
 
     if use_sampling:
         surface_ind, shape_dict = alpha_shape_alg_3D_with_sampling(points=volume.atoms, 
                                                     probe_radius=probe_radius,
                                                     N_samples=20,
-                                                    seed=seed,
                                                     rng=rng,
                                                     return_alpha_shape=True)
     else:
