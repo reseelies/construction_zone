@@ -9,6 +9,8 @@ from scipy.spatial import HalfspaceIntersection, ConvexHull, Delaunay, QhullErro
 from ..util.misc import round_away
 from ..transform.strain import HStrain
 
+from functools import reduce
+
 #####################################
 ##### Geometric Surface Classes #####
 #####################################
@@ -91,6 +93,17 @@ class Sphere(BaseAlgebraic):
 
         super().__init__(tol=tol)
 
+    def __repr__(self):
+        return f"Sphere(radius={repr(self.radius)}, center={repr(self.center)}, tol={repr(self.tol)})"
+
+    def __eq__(self, other):
+        if isinstance(other, Sphere):
+            checks = [np.allclose(x, y) for x, y in zip([self.radius, self.center, self.tol],
+                                                        [other.radius, other.center, other.tol])]
+            return reduce(lambda x, y: x and y, checks)
+        else:
+            return False
+    
     def checkIfInterior(self, testPoints: np.ndarray) -> np.ndarray:
         return np.sum((testPoints - self.center)**2.0,
                       axis=1) < (self.radius + self.tol)**2.0
@@ -124,7 +137,6 @@ class Sphere(BaseAlgebraic):
             raise ValueError("Center must be an array with 3 elements")
         self._center = center
 
-
 class Plane(BaseAlgebraic):
     """Algebraic surface for planes in R3.
 
@@ -147,6 +159,17 @@ class Plane(BaseAlgebraic):
 
         super().__init__(tol=tol)
 
+    def __repr__(self):
+        return f"Plane(normal={repr(self.normal)}, point={repr(self.point)}, tol={repr(self.tol)})"
+
+    def __eq__(self, other):
+        if isinstance(other, Plane):
+            checks = [np.allclose(x, y) for x, y in zip([self.normal, self.point, self.tol],
+                                                        [other.normal, other.point, other.tol])]
+            return reduce(lambda x, y: x and y, checks)
+        else:
+            return False
+    
     @property
     def params(self):
         """Return normal vector, point on plane of Plane."""
@@ -250,6 +273,17 @@ class Cylinder(BaseAlgebraic):
         self.length = length
         super().__init__(tol=tol)
 
+    def __repr__(self):
+        return f"Cylinder(axis={repr(self.axis)}, point={repr(self.point)}, radius={repr(self.radius)}, length={repr(self.length)}, tol={repr(self.tol)})"
+
+    def __eq__(self, other):
+        if isinstance(other, Cylinder):
+            checks = [np.allclose(x, y) for x, y in zip([self.radius, self.length, self.point, self.tol],
+                                                        [other.radius, self.length, other.point, other.tol])]
+            return reduce(lambda x, y: x and y, checks)
+        else:
+            return False
+   
     def params(self):
         """Return axis, point, radius, and length of cylinder."""
         return self.axis, self.point, self.radius, self.length

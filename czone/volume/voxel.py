@@ -34,9 +34,12 @@ class Voxel():
         return f"Voxel(bases={repr(self.bases)}, scale={repr(self.scale)}, origin={repr(self.origin)})"
     
     def __eq__(self, other):
-        checks = [np.allclose(x, y) for x, y in zip([self.bases, self.scale, self.origin],
-                                                    [other.bases, other.scale, other.origin])]
-        return reduce(lambda x, y: x and y, checks)
+        if isinstance(other, Voxel):
+            checks = [np.allclose(x, y) for x, y in zip([self.bases, self.scale, self.origin],
+                                                        [other.bases, other.scale, other.origin])]
+            return reduce(lambda x, y: x and y, checks)
+        else:
+            return False
 
     @property
     def scale(self):
