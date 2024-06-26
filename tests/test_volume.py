@@ -90,6 +90,23 @@ class Test_Plane(czone_TestCase):
 
         self.assertRaises(ValueError, lambda x: Plane(x,(0,0,0)), (0,0,0))
 
+    def test_eq(self):
+        for _ in range(self.N_trials):
+            normal = rng.normal(size=(3,))
+            point = rng.normal(size=(3,))
+
+            plane = Plane(normal, point, tol=0.0)
+
+            new_point = plane.project_point(rng.normal(size=(3,)))
+            self.assertEqual(plane, test_plane := Plane(normal, new_point, tol=0.0))
+
+            Rs = rng.normal(size=(3,3))
+            R = Rotation(np.linalg.qr(Rs)[0], origin=point)
+
+            R.applyTransformation_alg(plane)
+            R.applyTransformation_alg(test_plane)
+            self.assertEqual(plane, test_plane)
+
     def test_check_interior(self):
         for _ in  range(self.N_trials):
             normal = rng.normal(size=(3,))

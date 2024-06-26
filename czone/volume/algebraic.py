@@ -54,7 +54,7 @@ class BaseAlgebraic(ABC):
 
     @tol.setter
     def tol(self, val):
-        assert (float(val) > 0.0)
+        assert (float(val) >= 0.0)
         self._tol = float(val)
 
     def from_alg_object(self, **kwargs):
@@ -164,9 +164,18 @@ class Plane(BaseAlgebraic):
 
     def __eq__(self, other):
         if isinstance(other, Plane):
-            checks = [np.allclose(x, y) for x, y in zip([self.normal, self.point, self.tol],
-                                                        [other.normal, other.point, other.tol])]
-            return reduce(lambda x, y: x and y, checks)
+            # check collinearity of normals
+            check_collinearity = np.isclose(np.dot(self.normal,other.normal), 1.0)
+
+            # check to see if they define the same plane
+            check_origin_dist = np.isclose(np.dot(self.normal, self.point), np.dot(other.normal, other.point))
+
+            # property check
+            check_tol = self.tol == other.tol
+
+            checks = [check_collinearity, check_origin_dist, check_tol]
+
+            return reduce(lambda x, y: x and y, checks) 
         else:
             return False
     
