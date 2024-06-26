@@ -1,5 +1,5 @@
 import numpy as np
-
+from functools import reduce
 
 class Voxel():
     """Voxel class used to span space for generators and track transformations.
@@ -31,7 +31,12 @@ class Voxel():
         self.origin = origin
 
     def __repr__(self):
-        return f"Voxel(bases={self.bases}, scale={self.scale}, origin={self.origin})"
+        return f"Voxel(bases={repr(self.bases)}, scale={repr(self.scale)}, origin={repr(self.origin)})"
+    
+    def __eq__(self, other):
+        checks = [np.allclose(x, y) for x, y in zip([self.bases, self.scale, self.origin],
+                                                    [other.bases, other.scale, other.origin])]
+        return reduce(lambda x, y: x and y, checks)
 
     @property
     def scale(self):

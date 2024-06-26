@@ -1,5 +1,7 @@
 import unittest
 import numpy as np
+from numpy import array
+from czone.volume.voxel import Voxel
 from czone.volume.volume import makeRectPrism
 from czone.volume.algebraic import Sphere, Plane, get_bounding_box, convex_hull_to_planes, Cylinder
 from czone.transform import Rotation
@@ -8,6 +10,8 @@ from functools import reduce
 
 seed = 32135213035
 rng = np.random.default_rng(seed=seed)
+
+#### Tests for Algebraic Objects
 
 class Test_Sphere(unittest.TestCase):
     def setUp(self):
@@ -301,3 +305,20 @@ class Test_Cylinder(unittest.TestCase):
 
             self.assertTrue(np.array_equal(ref_check, r_cyl.checkIfInterior(r_points)))
 
+#### Tests for Voxel class
+
+class Test_Voxel(unittest.TestCase):
+    def setUp(self):
+        self.N_trials = 32
+
+    def test_init(self):
+        for _ in range(self.N_trials):
+
+            bases = rng.normal(size=(3,3))
+            scale = rng.uniform(0.1, 10)
+            origin = rng.uniform(-100, 100, size=(3,))
+
+            ref_voxel = Voxel(bases, scale, origin)
+            test_voxel = eval(ref_voxel.__repr__())
+
+            self.assertTrue(ref_voxel == test_voxel)
