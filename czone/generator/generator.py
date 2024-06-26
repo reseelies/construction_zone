@@ -450,5 +450,15 @@ class NullGenerator(BaseGenerator):
     def __init__(self):
         pass
 
+    def __repr__(self):
+        return "NullGenerator()"
+    
+    def __eq__(self, other):
+        if isinstance(NullGenerator):
+            return True
+        else:
+            return False
+
     def supply_atoms(self, bbox):
         return np.empty((0,3)), np.empty((0,))
+    
