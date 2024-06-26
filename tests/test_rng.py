@@ -3,6 +3,8 @@ import unittest
 import numpy as np
 import pytest
 
+from test_utils import czone_TestCase
+
 from czone.generator import (
     Generator,
     AmorphousGenerator,
@@ -28,11 +30,6 @@ completely reproduced by passing the RNG in as a property/argument.
 
 seed = 9871492
 base_rng = np.random.default_rng(seed=seed)
-
-class czone_TestCase(unittest.TestCase):
-    def assertArrayEqual(self, first, second, msg=None) -> None:
-        "Fail if the two arrays are unequal by via Numpy's array_equal method."
-        self.assertTrue(np.array_equal(first, second), msg=msg)
 
 class Test_Functions(czone_TestCase):
     def setUp(self):

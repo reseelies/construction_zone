@@ -1,6 +1,8 @@
 import unittest
 import numpy as np
 from numpy import array
+from test_utils import czone_TestCase
+
 from czone.volume.voxel import Voxel
 from czone.volume.volume import makeRectPrism
 from czone.volume.algebraic import Sphere, Plane, get_bounding_box, convex_hull_to_planes, Cylinder
@@ -13,7 +15,7 @@ rng = np.random.default_rng(seed=seed)
 
 #### Tests for Algebraic Objects
 
-class Test_Sphere(unittest.TestCase):
+class Test_Sphere(czone_TestCase):
     def setUp(self):
         self.N_trials = 100
         self.N_test_points = 1024
@@ -25,6 +27,7 @@ class Test_Sphere(unittest.TestCase):
             tol = rng.uniform(size=(1,))[0]
 
             sphere = Sphere(radius, center, tol=tol)
+            self.assertReprEqual(sphere)
 
             self.assertEqual(radius, sphere.radius)
             self.assertTrue(np.array_equal(center, sphere.center))
@@ -53,7 +56,7 @@ class Test_Sphere(unittest.TestCase):
             self.assertTrue(np.array_equal(ref_check, sphere.checkIfInterior(test_points)))
 
 
-class Test_Plane(unittest.TestCase):
+class Test_Plane(czone_TestCase):
     def setUp(self):
         self.N_trials = 100
         self.N_test_points = 1024
@@ -69,6 +72,7 @@ class Test_Plane(unittest.TestCase):
             tol = rng.uniform(size=(1,))[0]
 
             plane = Plane(normal, point, tol=tol)
+            self.assertReprEqual(plane)
 
             self.assertTrue(np.isclose(1.0, np.linalg.norm(plane.normal)))
             self.assertTrue(is_collinear(normal, plane.normal))
@@ -93,6 +97,7 @@ class Test_Plane(unittest.TestCase):
             tol = rng.uniform(size=(1,))[0]
 
             plane = Plane(normal, point, tol=tol)
+
             test_points = rng.uniform(-1000, 1000, size=(self.N_test_points, 3))
             ref_check = np.dot(test_points - point, normal/np.linalg.norm(normal)) < (tol)
     
@@ -187,7 +192,7 @@ class Test_Plane(unittest.TestCase):
         self.assertEqual(status, 2)
 
 
-class Test_Cylinder(unittest.TestCase):
+class Test_Cylinder(czone_TestCase):
 
     def setUp(self):
         self.N_trials = 100
@@ -207,7 +212,8 @@ class Test_Cylinder(unittest.TestCase):
             length = rng.uniform(1e-1, 1e2)
 
             cyl = Cylinder(axis, point, radius, length)
-
+            self.assertReprEqual(cyl)
+            
             ta, tp, tr, tl = cyl.params()
             
             self.assertEqual(radius, tr)
@@ -307,7 +313,7 @@ class Test_Cylinder(unittest.TestCase):
 
 #### Tests for Voxel class
 
-class Test_Voxel(unittest.TestCase):
+class Test_Voxel(czone_TestCase):
     def setUp(self):
         self.N_trials = 32
 
@@ -318,7 +324,5 @@ class Test_Voxel(unittest.TestCase):
             scale = rng.uniform(0.1, 10)
             origin = rng.uniform(-100, 100, size=(3,))
 
-            ref_voxel = Voxel(bases, scale, origin)
-            test_voxel = eval(ref_voxel.__repr__())
-
-            self.assertTrue(ref_voxel == test_voxel)
+            voxel = Voxel(bases, scale, origin)
+            self.assertReprEqual(voxel)
