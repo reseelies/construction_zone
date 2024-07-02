@@ -105,7 +105,7 @@ class EqualSet():
     def issubset(self, other):
         other = EqualSet(other)
         if len(other) >= len(self):
-            return reduce(lambda x, y: x and y, [i in other for i in self])
+            return reduce(lambda x, y: x and y, [i in other for i in self], True)
         else:
             return False
     
@@ -115,7 +115,7 @@ class EqualSet():
     def issuperset(self, other):
         other = EqualSet(other)
         if len(other) <= len(self):
-            return reduce(lambda x, y: x and y, [i in self for i in other])
+            return reduce(lambda x, y: x and y, [i in self for i in other], True)
         else:
             return False
     
@@ -130,10 +130,10 @@ class EqualSet():
             return (self <= other) and (self >= other)
 
     def __lt__(self, other):
-        return (self <= other) and (self != other)
+        return (self <= other) and (not self >= other)
     
     def __gt__(self, other):
-        return (self >= other) and (self != other)
+        return (self >= other) and (not self <= other)
 
 
 def array_set_equal(x, y, **kwargs):

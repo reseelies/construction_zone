@@ -99,6 +99,12 @@ class Test_EqualSet(czone_TestCase):
             self.assertFalse(false_check)
 
     def test_equalities(self):
+
+        ## Make sure empty sets are handled correctly
+        self.assertTrue(EqualSet() == EqualSet())
+        self.assertTrue(EqualSet() < EqualSet([1]))
+        self.assertTrue(EqualSet([1]) > EqualSet())
+
         for _ in range(self.N_trials):
             x = rng.integers(0, 100, size=(self.N_points))
             y = rng.integers(0, 100, size=(self.N_points))
