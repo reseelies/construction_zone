@@ -89,7 +89,7 @@ class EqualSet():
     
     def symmetric_difference(self, other: Iterable):
         A = EqualSet(other)
-        return (self - A).union(A - self)
+        return (self - A) | (A - self)
     
     def __xor__(self, other: Iterable):
         return self.symmetric_difference(other)
@@ -105,19 +105,31 @@ class EqualSet():
         return len(self.intersection(other)) == 0
     
     def issubset(self, other):
-        return reduce(lambda x, y: x and y, [i in other for i in self])
+        other = EqualSet(other)
+        if len(other) >= len(self):
+            return reduce(lambda x, y: x and y, [i in other for i in self])
+        else:
+            return False
     
     def __le__(self, other):
         return self.issubset(other)
     
     def issuperset(self, other):
-        return reduce(lambda x, y: x and y, [i in self for i in other])
+        other = EqualSet(other)
+        if len(other) <= len(self):
+            return reduce(lambda x, y: x and y, [i in self for i in other])
+        else:
+            return False
     
     def __ge__(self, other):
         return self.issuperset(other)
 
     def __eq__(self, other):
-        return (self <= other) and (self >= other)
+        other = EqualSet(other)
+        if len(other) != len(self):
+            return False
+        else:
+            return (self <= other) and (self >= other)
 
     def __lt__(self, other):
         return (self <= other) and (self != other)
