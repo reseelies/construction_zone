@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 from test_utils import czone_TestCase
 
-from czone.util.eset import EqualSet
+from czone.util.eset import EqualSet, array_set_equal
 
 seed = 9817924
 rng = np.random.default_rng(seed=seed)
@@ -126,3 +126,18 @@ class Test_EqualSet(czone_TestCase):
 
 
 
+class Test_ArraySet(czone_TestCase):
+    def setUp(self):
+        self.N_trials = 1024
+        self.N_points = 1024
+
+    def test_array_set_equal(self):
+
+        for _ in range(self.N_trials):
+
+            X = rng.uniform(size=(self.N_points, 3))
+            Xp = rng.permutation(X, axis=0)
+            self.assertTrue(array_set_equal(X, Xp))
+
+            Xp[23, :] = rng.uniform(size=(1,3)) + 1.0
+            self.assertFalse(array_set_equal(X, Xp))

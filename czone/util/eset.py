@@ -5,9 +5,7 @@ from typing import Union
 from functools import reduce
 
 class EqualSet():
-    """Creates a set based on equality operations.
-    For arrays, by default considers arrays unordered by axis 0.
-    
+    """Creates a set based on equality operations.    
     """
     def __init__(self, x=[]):
         self._storage = deque([])
@@ -138,45 +136,11 @@ class EqualSet():
         return (self >= other) and (self != other)
 
 
+def array_set_equal(x, y, **kwargs):
+    if x.shape != y.shape:
+        return False
+    
+    xs = np.sort(x, axis=0)
+    ys = np.sort(y, axis=0)
 
-
-
-
-
-
-
-
-
-
-
-
-
-# def set_equal(A, B, **kwargs):
-#     """Set equality for groups of unhashable types.
-#     Checks __eq__ for objects.
-#     For numpy arrays, checks that each item A[i, ...] is equal to some item B[j, ...],
-
-#     i.e., that A, B are unordered along axis 0 but ordred along other axes.
-#     """
-#     match A:
-#         case np.ndarray():
-#             if not isinstance(B, np.ndarray):
-#                 return False
-            
-#             if A.shape == B.shape:
-#                 A_sorted = np.sort(A, axis=0)
-#                 B_sorted = np.sort(B, axis=0)
-#                 return np.allclose(A_sorted, B_sorted, **kwargs)
-#             else:
-#                 return False
-#         case Iterable():
-
-#             ## reduce A and B to proper sets by ==
-#             A_dict = [id(a) for a in A]
-#             B_dict = [id(b) for b in B]
-
-
-
-#         case _:
-#             return A == B
-
+    return np.allclose(xs, ys, **kwargs)
