@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import pytest
 
-from test_utils import czone_TestCase
+from czone_test_fixtures import czone_TestCase
 
 from czone.generator import (
     Generator,

@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from test_utils import czone_TestCase
+from czone_test_fixtures import czone_TestCase
 
 from czone.util.eset import EqualSet, array_set_equal
 

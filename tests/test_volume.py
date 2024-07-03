@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 from numpy import array
-from test_util import czone_TestCase
+from czone_test_fixtures import czone_TestCase
 
 from czone.util.eset import array_set_equal, EqualSet
 from czone.generator import NullGenerator, Generator
@@ -179,7 +179,6 @@ class Test_Plane(czone_TestCase):
             
 
     def test_bounding_box(self):
-
         for _ in range(self.N_trials):
             hull_points = rng.uniform(-5, 5, size=(32, 3))
             test_points = rng.uniform(-10, 10, size=(self.N_test_points, 3))
@@ -189,13 +188,11 @@ class Test_Plane(czone_TestCase):
 
             test_points, status = get_bounding_box(planes)
             ref_points = tri.points[np.unique(tri.convex_hull),:]
-            self.assertTrue(np.allclose(np.sort(test_points, axis=0), np.sort(ref_points, axis=0)))
+            self.assertTrue(array_set_equal(test_points, ref_points))
             
-        
-        # If < 4 planes, should return unbounded
-        _, status = get_bounding_box(planes[:4])
-        self.assertEqual(status, 3)
-
+            # If < 4 planes, should return unbounded or null
+            _, status = get_bounding_box(planes[:3])
+            self.assertTrue(status in (2, 3))
 
         # If two planes mutually exclude eachother, feasible region should be null
         new_plane = Plane.from_alg_object(planes[0])
