@@ -454,7 +454,7 @@ class NullGenerator(BaseGenerator):
         return "NullGenerator()"
     
     def __eq__(self, other):
-        if isinstance(NullGenerator):
+        if isinstance(other, NullGenerator):
             return True
         else:
             return False

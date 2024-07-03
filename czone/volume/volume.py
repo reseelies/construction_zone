@@ -12,6 +12,10 @@ from ..transform import BaseTransform
 from .algebraic import BaseAlgebraic, Plane, Sphere, Cylinder
 from .algebraic import get_bounding_box as get_bounding_box_planes
 
+from functools import reduce
+
+from czone.util.eset import EqualSet, array_set_equal
+
 ############################
 ###### Volume Classes ######
 ############################
@@ -166,6 +170,37 @@ class Volume(BaseVolume):
 
         if alg_objects is not None:
             self.add_alg_object(alg_objects)
+
+    def __repr__(self):
+
+        args = (f"points={repr(self.points)}, ",
+                f"alg_objects={repr(self.alg_objects)}, ",
+                f"generator={repr(self.generator)}, ",
+                f"priority={repr(self.priority)}, ",
+                f"tolerance={repr(self.tolerance)}")
+        
+        return f"Volume({reduce(lambda x, y: x+y, args)})"
+
+
+    def __eq__(self, other):
+        # TODO: For now, this only checks set equivalance of the properties
+        # In the future, should also reduce to a minimum convex set
+        # e.g., if V1 has Sphere(5, np.zeros(3)) and Sphere(2, np.zeros(3))
+        # and V2 2 has only Sphere(2, np.zeros(3)), then V1 == V2 -> they define the same space
+
+        if isinstance(other, Volume):
+            # TODO: check against the convex hull instead
+            ## use hard ands instead of reduce over properties to short circuit
+
+            check = self.generator == other.generator and \
+                    array_set_equal(self.points, other.points) and \
+                    EqualSet(self.alg_objects) == (EqualSet(other.alg_objects)) and \
+                    self.priority == other.priority and \
+                    np.isclose(self.tolerance, other.tolerance)
+
+            return check
+        else:
+            return False
 
     """
     Properties
@@ -412,6 +447,13 @@ class MultiVolume(BaseVolume):
 
         if not (priority is None):
             self.priority = priority
+
+    def __repr__(self):
+        volume_substr = reduce(lambda x, y: x+y, [f'{repr(v)}, ' for v in self.volumes])
+        return f'MultiVolume(volumes=[{volume_substr}], priority={repr(self.priority)})'
+    
+    def __eq__(self, other):
+        return self.priority == other.priority and (EqualSet(self.volumes) == EqualSet(other.volumes))
 
     @property
     def volumes(self):

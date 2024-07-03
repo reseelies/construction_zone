@@ -1,10 +1,12 @@
 import unittest
 import numpy as np
 from numpy import array
-from test_utils import czone_TestCase
+from test_util import czone_TestCase
 
+from czone.util.eset import array_set_equal, EqualSet
+from czone.generator import NullGenerator, Generator
 from czone.volume.voxel import Voxel
-from czone.volume.volume import makeRectPrism
+from czone.volume.volume import makeRectPrism, Volume, MultiVolume
 from czone.volume.algebraic import Sphere, Plane, get_bounding_box, convex_hull_to_planes, Cylinder
 from czone.transform import Rotation
 from scipy.spatial import ConvexHull, Delaunay
@@ -343,3 +345,112 @@ class Test_Voxel(czone_TestCase):
 
             voxel = Voxel(bases, scale, origin)
             self.assertReprEqual(voxel)
+
+#### Tests for Volume and MultiVolue
+
+def get_random_alg_object():
+    choice = rng.choice(["p", "s", "c"])
+    tol = rng.uniform(size=(1,))[0]
+    match choice:
+        case 'p':
+            normal = rng.normal(size=(3,))
+            point = rng.normal(size=(3,))
+            return Plane(normal, point, tol=tol)
+        case 's':
+            radius = rng.uniform(size=(1,))[0]
+            center = rng.normal(size=(3,))
+            return Sphere(radius, center, tol=tol)
+        case 'c':
+            axis = rng.normal(size=(3,1))
+            point = rng.normal(size=(3,1))
+            radius = rng.uniform(1e-1, 1e2)
+            length = rng.uniform(1e-1, 1e2)
+            return Cylinder(axis, point, radius, length)
+        
+def get_random_volume():
+    points = rng.normal(size=(1024,3))
+    N_alg_objects = rng.integers(0,8)
+    alg_objects = [get_random_alg_object() for _ in range(N_alg_objects)]
+    priority = rng.integers(-10, 10)
+    tol = rng.uniform()
+    return Volume(points=points, alg_objects=alg_objects, generator=NullGenerator(), priority=priority, tolerance=tol)
+
+
+def perturb_volume(vol):
+    new_vol = vol.from_volume()
+    choice = rng.choice(["priority", "points", "alg_obj", "tolerance"])
+    match choice:
+        case 'priority':
+            while(new_vol.priority == vol.priority):
+                new_vol.priority = rng.integers(-10,10)
+        case 'points':
+            while(array_set_equal(new_vol.points, vol.points)):
+                new_vol.points = rng.normal(size=(1024,3))
+        case 'alg_obj':
+            while(EqualSet(new_vol.alg_objects) == EqualSet(vol.alg_objects)):
+                if len(vol.alg_objects) == 0:
+                    new_vol.add_alg_object(get_random_alg_object())
+                else:
+                    new_vol._alg_objects = [get_random_alg_object() for _ in range(len(vol.alg_objects))]
+        case 'tolerance':
+            while(np.isclose(new_vol.tolerance,  vol.tolerance)):
+                new_vol.tolerance = rng.uniform()
+
+    return new_vol
+
+class Test_VolumeClass(czone_TestCase):
+    def setUp(self):
+        self.N_trials = 32
+
+    def test_init(self):
+        for _ in range(self.N_trials):
+            vol = get_random_volume()
+            self.assertReprEqual(vol)
+
+    def test_eq(self):
+        for _ in range(self.N_trials):
+            vol = get_random_volume()
+
+            new_vol = Volume(points=rng.permutation(vol.points, axis=0),
+                             alg_objects= list(rng.permutation(vol.alg_objects)),
+                             generator= NullGenerator(),
+                             priority = vol.priority,
+                             tolerance = vol.tolerance)
+            self.assertEqual(vol, new_vol)
+            perturbed_volume = perturb_volume(vol)
+            self.assertNotEqual(vol, perturbed_volume)
+
+        new_vol = vol.from_volume(generator=Generator.from_spacegroup([1],
+                                                                      np.zeros((1,3)),
+                                                                      np.array([1,1,1]),
+                                                                      np.array([90,90,90]),
+                                                                      225))
+        self.assertNotEqual(vol, new_vol)
+
+
+class Test_MultiVolume(czone_TestCase):
+    def setUp(self):
+        self.N_trials = 32
+
+    def test_init(self):
+        for _ in range(self.N_trials):
+            N_vols = rng.integers(1,8)
+            mvol = MultiVolume([get_random_volume() for _ in range(N_vols)], priority=rng.integers(-10,10))
+            self.assertReprEqual(mvol)
+
+    def test_eq(self):
+
+        for _ in range(self.N_trials):
+            N_vols = rng.integers(1,8)
+            vols = [get_random_volume() for _ in range(N_vols)]
+            priority = rng.integers(-10, 10)
+            ref_mvol = MultiVolume(vols, priority=priority)
+            test_mvol = MultiVolume(rng.permutation(vols), priority=priority)
+
+            self.assertEqual(ref_mvol, test_mvol)
+            self.assertNotEqual(ref_mvol, MultiVolume(vols, priority=priority + 1))
+
+            perturbed_vols = [v for v in vols]
+            idx = rng.choice(range(len(vols)))
+            perturbed_vols[idx] = perturb_volume(perturbed_vols[idx])
+            self.assertNotEqual(ref_mvol, MultiVolume(perturbed_vols, priority=priority))

@@ -2,8 +2,12 @@ import unittest
 import numpy as np
 
 ## Import everything into the namespace so that repr's can evaluate
-from numpy import array
+import numpy as np
+from numpy import *
 from czone.volume import *
+from czone.generator import *
+
+import sys
 
 class czone_TestCase(unittest.TestCase):
     def assertArrayEqual(self, first, second, msg=None) -> None:
@@ -12,5 +16,6 @@ class czone_TestCase(unittest.TestCase):
 
     def assertReprEqual(self, obj, msg=None,) -> None:
         "Fail if the object re-created by the __repr__ method is not equal to the original."
-        self.assertEqual(obj, eval(repr(obj)), msg=msg)
+        with np.printoptions(threshold=sys.maxsize, floatmode='unique'):
+            self.assertEqual(obj, eval(repr(obj)), msg=msg)
 
