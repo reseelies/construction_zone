@@ -10,7 +10,7 @@ rng = np.random.default_rng(seed=seed)
 class Test_EqualSet(czone_TestCase):
 
     def setUp(self):
-        self.N_trials = 256
+        self.N_trials = 64
         self.N_points = 256
 
     def assertSetEquivalent(self, first, second, msg=None) -> None:

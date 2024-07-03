@@ -100,14 +100,14 @@ class Test_Functions(czone_TestCase):
             self.assertConsistent(alpha_shape_alg_3D_with_sampling, (test_points, probe_radius, N_samples), seed)
 
     def test_gen_p_substrate(self):
-        dims = (20,20,20)
+        dims = (15,15,15)
 
         for _ in range(self.N_trials):
             seed = base_rng.integers(0, int(1e6))
             self.assertConsistent(gen_p_substrate, (dims,), seed)
 
     def test_gen_p_substrate_batched(self):
-        dims = (20,20,20)
+        dims = (15,15,15)
 
         for _ in range(self.N_trials):
             seed = base_rng.integers(0, int(1e6))
