@@ -6,6 +6,7 @@ import numpy as np
 from numpy import *
 from czone.volume import *
 from czone.generator import *
+from czone.transform import *
 
 import sys
 

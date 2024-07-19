@@ -36,10 +36,53 @@ class BasePostTransform(ABC):
 class ChemicalSubstitution(BasePostTransform):
 
     def __init__(self, mapping : dict, frac, rng=None):
-        self.target = mapping.keys()
-        self.substitute = mapping.values()
+        self.mapping = mapping
         self.frac = frac
         self.rng = np.random.default_rng() if rng is None else rng
+
+    def __repr__(self):
+        return f'ChemicalSubstitution(mapping={repr(self.mapping)}, frac={self.frac})'
+
+    def __eq__(self, other):
+        if isinstance(other, ChemicalSubstitution):
+            return (self.mapping == other.mapping) and (np.isclose(self.frac, other.frac))
+        else:
+            return False
+
+    @property
+    def mapping(self) -> dict:
+        return self._mapping
+    
+    @mapping.setter
+    def mapping(self, m):
+        if isinstance(m, dict):
+            for k, v in m.items():
+                if (not isinstance(k, int)) or (not isinstance(v, int)):
+                    raise TypeError
+                if k == v:
+                    raise ValueError
+            self._mapping = m
+        else:
+            raise TypeError
+
+    @property
+    def target(self):
+        return self.mapping.keys()
+    
+    @property
+    def substitute(self):
+        return self.mapping.values()
+        
+    @property
+    def frac(self) -> float:
+        return self._frac
+    
+    @frac.setter
+    def frac(self, val: float):
+        if val <= 0 or val > 1:
+            raise ValueError
+        
+        self._frac = val
 
     def _replace_species(self, species):
 
