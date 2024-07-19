@@ -117,6 +117,9 @@ class Translation(BaseTransform):
         self.locked = locked
         self.basis_only = basis_only
 
+    def __repr__(self) -> str:
+        return f"Translation(shift={self.shift}, locked={self.locked}, basis_only={self.basis_only})"
+
     @property
     def shift(self):
         return self._shift
@@ -254,6 +257,14 @@ class Inversion(MatrixTransform):
     that have special setters which ensure validity of their respective transformations.
     """
 
+    def __init__(self,
+                 origin=None,
+                 locked: bool = True,
+                 basis_only: bool = False):
+        super().__init__(matrix=None,
+                         origin=origin,
+                         locked=locked,
+                         basis_only=basis_only)
     @property
     def matrix(self):
         """Inversion matrix. Cannot be altered."""
