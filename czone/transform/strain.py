@@ -6,7 +6,6 @@ from typing import Callable
 
 import numpy as np
 
-
 class BaseStrain(ABC):
     """Base class for strain fields that act on Generators.
 
@@ -37,7 +36,7 @@ class BaseStrain(ABC):
         """
         pass
 
-    def scrape_params(self, obj: BaseGenerator):
+    def scrape_params(self, obj: BaseGenerator): # noqa
         """Helper method to grab origin and bases from host generator.
 
         Args:
@@ -99,7 +98,8 @@ class HStrain(BaseStrain):
     """
 
     def __init__(self, matrix=None, origin="generator", mode="crystal"):
-        if not matrix is None:
+        super().__init__()
+        if matrix is not None:
             self.matrix = matrix
         else:
             # apply no strain
@@ -111,10 +111,25 @@ class HStrain(BaseStrain):
             self.origin = origin
             self.origin_type = "global"
         else:
-            super().__init__()
             self.origin_type = "generator"
 
         self._bases = None
+
+    def __repr__(self):
+        if self.origin_type == 'generator':
+            return f"HStrain(matrix={repr(self.matrix)}, origin='generator', mode='{self.mode}')"
+        else:
+            return f"HStrain(matrix={repr(self.matrix)}, origin={self.origin}, mode='{self.mode}')"
+
+    def __eq__(self, other):
+        if isinstance(other, HStrain):
+            base_check = np.allclose(self.matrix, other.matrix) and self.mode == other.mode 
+            if self.origin_type == "generator":
+                return base_check and self.origin_type == other.origin_type
+            else:
+                return base_check and self.origin == other.origin
+        else:
+            return False
 
     ##############
     # Properties #
@@ -128,20 +143,21 @@ class HStrain(BaseStrain):
     @matrix.setter
     def matrix(self, vals):
         vals = np.squeeze(np.array(vals))
-        if vals.shape == (3,):
-            self._matrix = np.eye(3) * vals
-        elif vals.shape == (3, 3):
-            self._matrix = vals
-        elif vals.shape == (9,):
-            self._matrix = np.reshape(vals, (3, 3))
-        elif vals.shape == (6,):
-            # voigt notation
-            v = vals
-            self._matrix = np.array([[v[0], v[5], v[4]], \
-                                     [v[5], v[1], v[3]], \
-                                     [v[4], v[3], v[2]]])
-        else:
-            raise ValueError("Input shape must be either 3,6, or 9 elements")
+        match vals.shape:
+            case (3,):
+                self._matrix = np.eye(3) * vals
+            case (3,3):
+                self._matrix = vals
+            case (9,):
+                self._matrix = np.reshape(vals, (3, 3))
+            case (6,):
+                # voigt notation
+                v = vals
+                self._matrix = np.array([[v[0], v[5], v[4]], \
+                                        [v[5], v[1], v[3]], \
+                                        [v[4], v[3], v[2]]])
+            case _:
+                raise ValueError("Input shape must be either 3,6, or 9 elements")
 
     ##############
     ### Methods ##

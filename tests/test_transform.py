@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 from czone_test_fixtures import czone_TestCase
 
-from czone.transform import ChemicalSubstitution
+from czone.transform import ChemicalSubstitution, HStrain
 
 seed = 871342
 rng = np.random.default_rng(seed=seed)
@@ -26,3 +26,18 @@ class Test_ChemicalSubstitution(czone_TestCase):
             mapping = get_random_mapping(rng)
             chem_sub = ChemicalSubstitution(mapping, frac)
             self.assertReprEqual(chem_sub)
+
+
+class Test_HStrain(czone_TestCase):
+    def setUp(self):
+        self.N_trials = 128
+
+    def test_init(self):
+        def yield_strain_matrices():
+            for shape in ((3,), (3,3), (9,), (6,)):
+                yield rng.uniform(size=shape)
+
+        for _ in range(self.N_trials):
+            for m in yield_strain_matrices():
+                hstrain = HStrain(m, origin='generator', mode='crystal')
+                self.assertReprEqual(hstrain)
