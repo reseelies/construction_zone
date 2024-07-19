@@ -70,7 +70,7 @@ class ChemicalSubstitution(BasePostTransform):
 
 
 
-class ArbitraryPostTransform(BasePostTransform):
+class CustomPostTransform(BasePostTransform):
     def __init__(self, fun):
         self.fun = fun
 
