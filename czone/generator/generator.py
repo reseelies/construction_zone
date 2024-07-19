@@ -11,7 +11,7 @@ from ..transform import BaseTransform
 from ..transform.strain import BaseStrain
 from ..transform.post import BasePostTransform
 from ..volume.voxel import Voxel
-from .amorphous_algorithms import *
+from .amorphous_algorithms import gen_p_substrate, gen_p_substrate_batched
 
 #####################################
 ########## Generator Classes ########
@@ -40,6 +40,16 @@ class BaseGenerator(ABC):
         Returns:
             Coordinates and species of atoms that fill convex region. 
             Returned as Nx3 and Nx1 arrays.
+        """
+        pass
+
+
+    @abstractmethod
+    def transform(self, transformation: BaseTransform):
+        """Transform Generator object with transformation described by Transformation object.
+        
+        Args:
+            transformation (BaseTransform): Transformation object from transforms module.
         """
         pass
 
@@ -87,21 +97,41 @@ class Generator(BaseGenerator):
     def __init__(self,
                  origin: np.ndarray = None,
                  structure: Structure = None,
-                 strain_field: BaseStrain = None):
+                 strain_field: BaseStrain = None,
+                 post_transform: BasePostTransform = None):
         self._structure = None
         self._voxel = None
         self._orientation = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
         self._strain_field = None
         self._post_transform = None
 
-        if not structure is None:
+        if structure is not None:
             self.structure = structure
 
-        if not strain_field is None:
+        if strain_field is not None:
             self.strain_field = strain_field
 
-        if not origin is None:
+        if post_transform is not None:
+            self.post_transform = post_transform
+
+        if origin is not None:
             self.origin = origin
+
+    def __eq__(self, other):
+
+        ## same structure
+        ## same origin % basis
+        ## same strain field, if there is one 
+
+        # TODO: here, generators are equal if they define equivalent lattices
+        # need to decide whether Voxels should be equal if same lattice or only generators
+        # as of writing, Voxels only equal if origins are equal
+        
+        checks = (self.structure == other.structure,
+                  self.strain_field == other.strain_field,
+                  self.post_transform == other.post_transform,
+                  np.allclose(self.voxel.bases, other.voxel.bases)) 
+        pass
 
     """
     Properties
@@ -435,6 +465,12 @@ class AmorphousGenerator(BaseGenerator):
                 np.max(bbox, axis=0) - np.min(bbox, axis=0), self.min_dist, self.density, rng=self.rng, **kwargs)
             self._old_result = (coords + np.min(bbox, axis=0), np.ones(coords.shape[0]) * self.species)
             return self.old_result
+        
+    def transform(self, transformation: BaseTransform):
+        if not (transformation.basis_only):
+            new_origin = transformation.applyTransformation(
+                np.reshape(self.origin, (1, 3)))
+            self.origin = new_origin
 
 
 class NullGenerator(BaseGenerator):
@@ -462,3 +498,5 @@ class NullGenerator(BaseGenerator):
     def supply_atoms(self, bbox):
         return np.empty((0,3)), np.empty((0,))
     
+    def transform(self, transformation):
+        pass
