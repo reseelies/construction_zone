@@ -90,8 +90,10 @@ class Voxel():
 
     @origin.setter
     def origin(self, origin: np.ndarray):
-        assert (origin.shape == (3,)), "Origin must have shape (3,)"
-        self._origin = np.array(origin)
+        try:
+            self._origin = np.array(origin).reshape((3,))
+        except Exception as e:
+            print(e)
 
     @property
     def sbases(self):

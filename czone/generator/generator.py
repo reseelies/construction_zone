@@ -13,6 +13,8 @@ from ..transform.post import BasePostTransform
 from ..volume.voxel import Voxel
 from .amorphous_algorithms import gen_p_substrate, gen_p_substrate_batched
 
+from functools import reduce
+
 #####################################
 ########## Generator Classes ########
 #####################################
@@ -117,8 +119,18 @@ class Generator(BaseGenerator):
         if origin is not None:
             self.origin = origin
 
-    def __eq__(self, other):
 
+    def __repr__(self):
+
+        structure_repr = f'Structure(lattice={repr(self.lattice.matrix)}, species={self.species}, coords={repr(self.coords)})'
+        arg_string = f'origin={repr(self.origin)}, ' \
+                   + f'structure={structure_repr}, ' \
+                   + f'strain_field={repr(self.strain_field)}, ' \
+                   + f'post_transform={repr(self.post_transform)},  '
+        
+        return f'Generator({arg_string})'
+
+    def __eq__(self, other):
         ## same structure
         ## same origin % basis
         ## same strain field, if there is one 
@@ -130,8 +142,8 @@ class Generator(BaseGenerator):
         checks = (self.structure == other.structure,
                   self.strain_field == other.strain_field,
                   self.post_transform == other.post_transform,
-                  np.allclose(self.voxel.bases, other.voxel.bases)) 
-        pass
+                  self.voxel == other.voxel) 
+        return reduce(lambda x, y: x and y, checks)
 
     """
     Properties
@@ -271,10 +283,13 @@ class Generator(BaseGenerator):
         Args:
             transformation (BaseTransform): Transformation object from transforms module.
         """
-        assert (isinstance(transformation, BaseTransform)
-               ), "Supplied transformation not transformation object."
+        if not isinstance(transformation, BaseTransform):
+           raise TypeError("Supplied transformation not transformation object.")
+        
         self.voxel.bases = transformation.applyTransformation_bases(
             self.voxel.bases)
+        
+        self.structure.lattice = Lattice(self.voxel.bases) # so that __repr__ reproduces faithfully
 
         if not (transformation.basis_only):
             new_origin = transformation.applyTransformation(
