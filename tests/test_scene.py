@@ -84,6 +84,15 @@ class Test_Scene(czone_TestCase):
         self.assertEqual(set(ref_ids), set(test_ids))
 
 
+    def test_eq(self):
+        for _ in range(self.N_trials):
+            ref = get_random_scene()
+            test = Scene(ref.domain, objects=rng.permutation(ref.objects))
+            self.assertEqual(ref, test)
+            self.assertEqual(set([id(o) for o in ref.objects]),
+                             set([id(o) for o in test.objects]))
+
+
     def test_get_priorities(self):
 
         def get_objects(N_objects, min_priority=-10, max_priority=10):
