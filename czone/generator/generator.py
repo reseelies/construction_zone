@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import copy
 import itertools
 from abc import ABC, abstractmethod
@@ -404,6 +406,20 @@ class AmorphousGenerator(BaseGenerator):
         self.density = density
         self.use_old_result = False
         self.rng = np.random.default_rng() if rng is None else rng
+
+    def __repr__(self) -> str:
+        arg_string = f'origin={repr(self.origin)}, min_dist={self.min_dist}, density={self.density}, species={self.species}'
+        return f'AmorphousGenerator({arg_string})'
+
+
+    def __eq__(self, other: AmorphousGenerator) -> bool:
+        if isinstance(other, AmorphousGenerator):
+            checks = (np.allclose(self.origin, other.origin),
+                    np.isclose(self.min_dist, other.min_dist),
+                    np.isclose(self.density, other.density))
+            return reduce(lambda x, y: x and y, checks)
+        else:
+            return False
 
     """
     Properties

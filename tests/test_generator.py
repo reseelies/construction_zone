@@ -4,7 +4,7 @@ import numpy as np
 from czone_test_fixtures import czone_TestCase
 from test_transform import get_random_mapping
 
-from czone.generator import Generator, NullGenerator
+from czone.generator import Generator, NullGenerator, AmorphousGenerator
 from czone.transform import (
     Inversion,
     Reflection,
@@ -107,6 +107,7 @@ def get_random_generator(N_species=8, with_strain=True, with_sub=True):
         strain_field=hstrain,
         post_transform=chem_sub,
     )
+
 class Test_Generator(czone_TestCase):
     def setUp(self):
         self.N_trials = 128
@@ -130,3 +131,17 @@ class Test_Generator(czone_TestCase):
 
             self.assertArrayEqual(gpos, hpos)
             self.assertArrayEqual(gspecies, hspecies)
+
+class Test_AmorphousGenerator(czone_TestCase):
+    def setUp(self):
+        self.N_trials = 128
+
+    def test_init(self):
+        for _ in range(self.N_trials):
+            origin = rng.uniform(-10,10, size=(1,3))
+            min_dist = rng.uniform(0.5, 10)
+            density = rng.uniform(0.05, 1.0)
+            species = rng.integers(1,119)
+
+            G = AmorphousGenerator(origin, min_dist, density, species)
+            self.assertReprEqual(G)
