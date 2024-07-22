@@ -17,6 +17,7 @@ from czone.transform import (
 from czone.volume.algebraic import Plane, Sphere
 
 from pymatgen.core import Lattice, Structure
+from czone.volume import Volume
 
 seed = 72349
 rng = np.random.default_rng(seed=seed)
@@ -77,24 +78,24 @@ class Test_NullGenerator(czone_TestCase):
             self.assertArrayEqual(species, t_species, f'Failed with {msg}')
 
 
-def get_random_generator():
-    if rng.uniform() < 0.5:
+def get_random_generator(N_species=8, with_strain=True, with_sub=True):
+    if with_strain and rng.uniform() < 0.5:
         hstrain = HStrain(rng.uniform(size=(3,)))
     else:
         hstrain = None
 
-    if rng.uniform() < 0.5:
+    if with_sub and rng.uniform() < 0.5:
         chem_sub = ChemicalSubstitution(
             get_random_mapping(rng), frac=rng.uniform()
         )
     else:
         chem_sub = None
 
-    lattice = Lattice(rng.normal(size=(3, 3)))
+    lattice = Lattice(5*np.eye(3) + rng.normal(size=(3,3)))
 
-    N_species = rng.integers(1, 16)
+    N_species = rng.integers(1, N_species)
     species = rng.integers(1, 119, size=(N_species))
-    pos = rng.uniform(size=(N_species, 3))
+    pos = rng.uniform(size=(N_species, 3) )
 
     structure = Structure(lattice, species, pos)
 
@@ -112,14 +113,20 @@ class Test_Generator(czone_TestCase):
 
     def test_init(self):
         for _ in range(self.N_trials):
-            for G, msg in get_transformed_generators(get_random_generator()):
+            G_0 = get_random_generator()
+            for G, msg in get_transformed_generators(G_0):
                 self.assertReprEqual(G, msg)
 
-        # # type check on structure
-        # self.assertRaises(TypeError, lambda x : Generator())
+    def test_eq(self):
+        for _ in range(self.N_trials):
+            G = get_random_generator(with_strain=False, with_sub=False)
+            H = G.from_generator()
 
-        # # type check on strain_field
-        # self.assertRaises(TypeError, lambda x : Generator(strain_field=Inversion(np.zeros(3))))
+            self.assertEqual(G, H)
+            V = Volume(alg_objects=Sphere(radius=10, center=np.zeros(3)))
+            bbox = V.get_bounding_box()
+            gpos, gspecies = G.supply_atoms(bbox)
+            hpos, hspecies = H.supply_atoms(bbox)
 
-        # # type check on post_transform
-        # self.assertRaises(TypeError, lambda x : Generator(post_transform=Inversion(np.zeros(3)))        
+            self.assertArrayEqual(gpos, hpos)
+            self.assertArrayEqual(gspecies, hspecies)
