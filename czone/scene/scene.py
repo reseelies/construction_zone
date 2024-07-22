@@ -31,21 +31,21 @@ class BaseScene(ABC):
         Args:
             ob (BaseVolume): object or lists of objects to add to scene.
         """
+        if ob is not None:
+            ## create a temporary list to handle either single input or iter of inputs
+            new_objects = []
+            try:
+                new_objects.extend(ob)
+            except TypeError:
+                new_objects.append(ob)
 
-        ## create a temporary list to handle either single input or iter of inputs
-        new_objects = []
-        try:
-            new_objects.extend(ob)
-        except TypeError:
-            new_objects.append(ob)
-
-        ## check each new object to see if it is a Volume
-        type_check = reduce(lambda x, y: x and y,
-                            [isinstance(new_obj, BaseVolume) for new_obj in new_objects])
-        if type_check:
-            self._objects.extend(new_objects)
-        else:
-            raise TypeError(f'Object {ob} must inherit from BaseVolume, and is instead {type(ob)}.')
+            ## check each new object to see if it is a Volume
+            type_check = reduce(lambda x, y: x and y,
+                                [isinstance(new_obj, BaseVolume) for new_obj in new_objects])
+            if type_check:
+                self._objects.extend(new_objects)
+            else:
+                raise TypeError(f'Object {ob} must inherit from BaseVolume, and is instead {type(ob)}.')
 
     @property
     def _checks(self):
@@ -194,53 +194,45 @@ class Scene(BaseScene):
         ase_atoms (Atoms): Collection of atoms in scene as ASE Atoms object.
     """
 
-    def __init__(self, bounds=None, objects=None):
+    def __init__(self, domain: Voxel, objects=None):
         super().__init__()
 
-        self._bounds = None
-        self._checks = None
-
-        if not (objects is None):
-            self.add_object(objects)
-
-        if bounds is None:
-            #default bounding box is 10 angstrom cube
-            bbox = makeRectPrism(10, 10, 10)
-            self.bounds = np.vstack(
-                [np.min(bbox, axis=0),
-                 np.max(bbox, axis=0)])
-        else:
-            self.bounds = bounds
+        self.domain = domain
+        self.add_object(objects)
+        self._checks = []
 
     def __repr__(self) -> str:
-        return f'Scene(bounds={repr(self.bounds)}, objects={repr(self.objects)})'
+        return f'Scene(domain={repr(self.domain)}, objects={repr(self.objects)})'
 
     def __eq__(self, other: Scene) -> bool:
         if isinstance(other, Scene):
-            bounds_check = np.allclose(self.bounds, other.bounds)
+            domain_check = self.domain == other.domain
             object_check = EqualSet(self.objects) == EqualSet(other.objects)
-            return bounds_check and object_check
+            return domain_check and object_check
         else:
             return False
 
     @property
-    def bounds(self):
-        """Current boundaries of nanoscale scene."""
-        return self._bounds
+    def domain(self) -> Voxel:
+        """Current domain of nanoscale scene."""
+        return self._domain
 
-    @bounds.setter
-    def bounds(self, bounds: np.ndarray):
-        bounds = np.array(bounds)
-        assert (bounds.shape == (2, 3))
-        self._bounds = bounds
+    @domain.setter
+    def domain(self, domain: Voxel):
+        if isinstance(domain, Voxel):
+            self._domain = domain
+        else:
+            raise TypeError
 
     @property
     def ase_atoms(self):
         """Collection of atoms in scene as ASE Atoms object."""
-        cell_dims = self.bounds[1, :] - self.bounds[0, :]
+        cell_dims = self.domain.sbases.T
+        celldisp = self.domain.origin
         return Atoms(symbols=self.all_species,
                      positions=self.all_atoms,
-                     cell=cell_dims)
+                     cell=cell_dims,
+                     celldisp=celldisp)
 
     def check_against_object(self, atoms, idx):
         return np.logical_not(self.objects[idx].checkIfInterior(atoms))
@@ -254,8 +246,7 @@ class PeriodicScene(BaseScene):
         super().__init__()
         self.domain_cell = domain_cell
         self.pbc = pbc
-        if objects is not None:
-            self.add_object(objects)
+        self.add_object(objects)
 
     def _get_periodic_indices(self, bbox):
         """Get set of translation vectors, in units of the domain cell, for all 

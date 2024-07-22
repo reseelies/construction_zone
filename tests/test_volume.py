@@ -364,13 +364,13 @@ def get_random_alg_object():
             length = rng.uniform(1e-1, 1e2)
             return Cylinder(axis, point, radius, length)
         
-def get_random_volume():
-    points = rng.normal(size=(1024,3))
+def get_random_volume(generator=NullGenerator(), N_points=1024, rng=rng):
+    points = rng.normal(size=(N_points,3))
     N_alg_objects = rng.integers(0,8)
     alg_objects = [get_random_alg_object() for _ in range(N_alg_objects)]
     priority = rng.integers(-10, 10)
     tol = rng.uniform()
-    return Volume(points=points, alg_objects=alg_objects, generator=NullGenerator(), priority=priority, tolerance=tol)
+    return Volume(points=points, alg_objects=alg_objects, generator=generator, priority=priority, tolerance=tol)
 
 
 def perturb_volume(vol):

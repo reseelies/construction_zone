@@ -78,7 +78,7 @@ class Test_NullGenerator(czone_TestCase):
             self.assertArrayEqual(species, t_species, f'Failed with {msg}')
 
 
-def get_random_generator(N_species=8, with_strain=True, with_sub=True):
+def get_random_generator(N_species=8, with_strain=True, with_sub=True, rng=rng):
     if with_strain and rng.uniform() < 0.5:
         hstrain = HStrain(rng.uniform(size=(3,)))
     else:

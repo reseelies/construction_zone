@@ -3,7 +3,7 @@ import numpy as np
 
 from czone_test_fixtures import czone_TestCase
 
-from czone.volume.volume import Volume
+from czone.volume import Volume, MultiVolume, Voxel
 from czone.volume.algebraic import Sphere
 from czone.molecule import Molecule
 from czone.scene.scene import Scene
@@ -12,6 +12,40 @@ from itertools import repeat
 
 seed = 709123
 rng = np.random.default_rng(seed=seed)
+
+from test_volume import get_random_volume
+from test_generator import get_random_generator
+
+
+def get_random_object(rng=rng):
+    vol_type = rng.choice(['Volume', 'MultiVolume'])
+
+    match vol_type:
+        case 'Volume':
+            G = get_random_generator(rng=rng)
+            V = get_random_volume(G, N_points=8, rng=rng)
+        case 'MultiVolume':
+            N_vols = rng.integers(2,8)
+            Gs = [get_random_generator(rng=rng) for _ in range(N_vols)]
+            Vs = [get_random_volume(N_points=8, generator=g, rng=rng) for g in Gs]
+            V  = MultiVolume(Vs, priority=rng.integers(-10,10))
+            
+    return V
+
+def get_random_domain():
+    bases = rng.normal(size=(3,3))
+    scale = rng.uniform(0.1, 10)
+    origin = rng.uniform(-100, 100, size=(3,))
+
+    return Voxel(bases, scale, origin)
+
+def get_random_scene(N_max_objects=8, rng=rng):
+    
+    N_objects = rng.integers(1, N_max_objects)
+    domain = get_random_domain()
+    objects = [get_random_object() for _ in range(N_objects)]
+
+    return Scene(domain, objects)
 
 
 class Test_Scene(czone_TestCase):
@@ -22,25 +56,29 @@ class Test_Scene(czone_TestCase):
 
 
     def test_init(self):
+        for _ in range(self.N_trials):
+            scene = get_random_scene()
+            self.assertReprEqual(scene)
 
+        domain = Voxel()
         ## init with one sphere
         sphere = Sphere(1, np.zeros((3,1)))
-        self.assertRaises(TypeError, lambda : Scene(objects=sphere))
+        self.assertRaises(TypeError, lambda : Scene(domain, objects=sphere))
 
         ## init with two spheres
         spheres = [Volume(alg_objects=[Sphere(1, np.zeros((3,1)))]),
                 Sphere(5, np.zeros((3,1)))]
-        self.assertRaises(TypeError, lambda : Scene(objects=spheres))
+        self.assertRaises(TypeError, lambda : Scene(domain, objects=spheres))
 
         spheres = [Volume(alg_objects=[Sphere(1, np.zeros((3,1)))]),
                     Volume(alg_objects=[Sphere(5, np.zeros((3,1)))])]
-        scene = Scene(objects=spheres)
+        scene = Scene(domain, objects=spheres)
 
+        # Check to see that references are carried around and not copies
         ref_ids = [id(x) for x in spheres]
         test_ids = [id(x) for x in scene.objects]
         self.assertEqual(set(ref_ids), set(test_ids))
 
-        self.assertReprEqual(scene)
 
     def test_get_priorities(self):
 
@@ -63,7 +101,7 @@ class Test_Scene(czone_TestCase):
                     ref_dict[o.priority] = [id(o)]
 
             ## Create scene and get priority array
-            scene = Scene(objects=objs)
+            scene = Scene(domain=Voxel(), objects=objs)
             rel_plevels, offsets = scene._get_priorities()
 
             orig_priorities = [o.priority for o in objs]
@@ -137,7 +175,7 @@ class Test_Scene(czone_TestCase):
 
         for _ in range(self.N_trials):
             objs = list(get_objects(32))
-            scene = Scene(objects=objs)
+            scene = Scene(domain=Voxel(), objects=objs)
             
             ## Populate scene and sort atoms by position
             scene.populate_no_collisions()

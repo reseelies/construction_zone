@@ -454,7 +454,10 @@ class MultiVolume(BaseVolume):
         return f'MultiVolume(volumes=[{volume_substr}], priority={repr(self.priority)})'
     
     def __eq__(self, other):
-        return self.priority == other.priority and (EqualSet(self.volumes) == EqualSet(other.volumes))
+        if isinstance(other, MultiVolume):
+            return self.priority == other.priority and (EqualSet(self.volumes) == EqualSet(other.volumes))
+        else:
+            return False
 
     @property
     def volumes(self):
