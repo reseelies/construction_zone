@@ -46,7 +46,7 @@ def get_random_scene(periodic=False, N_max_objects=8, rng=rng,):
     objects = [get_random_object() for _ in range(N_objects)]
 
     if periodic:
-        pbc = tuple((rng.choice([True, False]) for _ in range(3)))
+        pbc = tuple((bool(rng.choice([True, False])) for _ in range(3)))
         return PeriodicScene(domain, objects, pbc=pbc)
     else:
         return Scene(domain, objects)

@@ -17,9 +17,24 @@ from czone.util.eset import EqualSet, array_set_equal
 
 class BaseScene(ABC):
 
-    def __init__(self):
+    def __init__(self, domain, objects):
         self._objects = []
+        self._checks = []
+        self.domain = domain
+        self.add_object(objects)
 
+    @property
+    def domain(self) -> Voxel:
+        """Current domain of nanoscale scene."""
+        return self._domain
+
+    @domain.setter
+    def domain(self, domain: Voxel):
+        if isinstance(domain, Voxel):
+            self._domain = domain
+        else:
+            raise TypeError
+        
     @property
     def objects(self) -> List[BaseVolume]:
         """List of objects in current scene."""
@@ -195,11 +210,7 @@ class Scene(BaseScene):
     """
 
     def __init__(self, domain: Voxel, objects=None):
-        super().__init__()
-
-        self.domain = domain
-        self.add_object(objects)
-        self._checks = []
+        super().__init__(domain, objects)
 
     def __repr__(self) -> str:
         return f'Scene(domain={repr(self.domain)}, objects={repr(self.objects)})'
@@ -211,18 +222,6 @@ class Scene(BaseScene):
             return domain_check and object_check
         else:
             return False
-
-    @property
-    def domain(self) -> Voxel:
-        """Current domain of nanoscale scene."""
-        return self._domain
-
-    @domain.setter
-    def domain(self, domain: Voxel):
-        if isinstance(domain, Voxel):
-            self._domain = domain
-        else:
-            raise TypeError
 
     @property
     def ase_atoms(self):
@@ -243,10 +242,8 @@ class Scene(BaseScene):
 class PeriodicScene(BaseScene):
     
     def __init__(self, domain: Voxel, objects=None, pbc=(True, True, True)):
-        super().__init__()
-        self.domain = domain
+        super().__init__(domain, objects)
         self.pbc = pbc
-        self.add_object(objects)
     
     def __repr__(self) -> str:
         return f'PeriodicScene(domain={repr(self.domain)}, objects={repr(self.objects)}, pbc={self.pbc})'
@@ -261,6 +258,20 @@ class PeriodicScene(BaseScene):
         else:
             return False
 
+    @property
+    def pbc(self):
+        return self._pbc
+    
+    @pbc.setter
+    def pbc(self, val):
+        if len(val) == 3:
+            if reduce(lambda x, y: x and y, [isinstance(v, bool) for v in val]):
+                self._pbc = val
+            else:
+                raise TypeError
+        else:
+            raise ValueError
+        
     def _get_periodic_indices(self, bbox):
         """Get set of translation vectors, in units of the domain cell, for all 
         relevant periodic images to generate."""
