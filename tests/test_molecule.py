@@ -47,6 +47,20 @@ class Test_Molecule(czone_TestCase):
         positions = rng.normal(size=(N,4))
         self.assertRaises(ValueError, init_f, species, positions)
 
+    def test_eq(self):
+        N = 256
+
+        ## Check set equality
+        for _ in range(self.N_trials):
+            species = rng.integers(1,119,(N,1))
+            positions = rng.normal(size=(N,3))
+            ref_mol = Molecule(species, positions)
+
+            new_order = rng.permutation(np.arange(N))
+            test_mol = Molecule(species[new_order], positions[new_order])
+
+            self.assertEqual(ref_mol, test_mol)
+
     def test_copy_constructors(self):
         N = 512
         for _ in range(self.N_trials//8):
