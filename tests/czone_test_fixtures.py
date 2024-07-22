@@ -8,6 +8,7 @@ from czone.volume import *
 from czone.generator import *
 from czone.transform import *
 from czone.scene import *
+from czone.molecule import *
 
 import sys
 

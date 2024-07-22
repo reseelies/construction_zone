@@ -1,13 +1,14 @@
-import unittest
 import numpy as np
 from pymatgen.core.structure import Molecule as pmg_molecule
 from czone.molecule import Molecule
 from czone.transform import MatrixTransform
 
+from czone_test_fixtures import czone_TestCase
+
 seed = 8907190823
 rng = np.random.default_rng(seed=seed)
 
-class Test_Molecule(unittest.TestCase):
+class Test_Molecule(czone_TestCase):
 
     def setUp(self):
         self.N_trials = 100
@@ -23,6 +24,7 @@ class Test_Molecule(unittest.TestCase):
 
             self.assertTrue(np.allclose(mol.species, species.ravel()))
             self.assertTrue(np.allclose(mol.atoms, positions))
+            self.assertReprEqual(mol)
 
         ## Check input errors with wrong shaped arrays
         init_f = lambda s, p : Molecule(s,p)

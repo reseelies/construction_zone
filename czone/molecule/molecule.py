@@ -1,3 +1,4 @@
+from __future__ import annotations
 from abc import ABC, abstractmethod
 
 import numpy as np
@@ -5,6 +6,8 @@ from ase import Atoms
 from pymatgen.core.structure import IMolecule
 from ..transform import BaseTransform
 from ..generator import BaseGenerator
+from czone.util.eset import array_set_equal
+
 import warnings
 
 import copy
@@ -25,7 +28,6 @@ class BaseMolecule(BaseGenerator):
         species (np.ndarray): Nx1 array of atomic numbers of atom in molecule
         origin (np.ndarray): Reference origin of molecule.
         orientation (np.ndarray): Reference orientation of molecule.
-        priority (int): Relative generation precedence of molecule.
         ase_atoms (Atoms): Collection of atoms in molecule as ASE Atoms object
     
     """
@@ -34,7 +36,6 @@ class BaseMolecule(BaseGenerator):
     def __init__(self, species, positions, origin=None, **kwargs) -> None:
         self._atoms = None
         self._species = None
-        self.priority = 0
         self.reset_orientation()
         self.print_warnings = True
         self.set_atoms(species, positions)
@@ -152,18 +153,6 @@ class BaseMolecule(BaseGenerator):
         else:
             raise TypeError(f"Supplied drigin index is a {type(val)} and must be an integer")
 
-    @property
-    def priority(self):
-        """Relative generation precedence of molecule."""
-        return self._priority
-
-    @priority.setter
-    def priority(self, priority):
-        if not np.issubdtype(type(priority), np.integer):
-            raise TypeError("Priority must be an integer.")
-
-        self._priority = priority
-
     def transform(self, transformation: BaseTransform, transform_origin=True):
         """Transform molecule with given transformation.
 
@@ -228,12 +217,12 @@ class BaseMolecule(BaseGenerator):
     def supply_atoms(self, *args, **kwargs):
         return self.atoms, self.species 
 
-    def checkIfInterior(self, testPoints: np.ndarray):
-        ## TODO
-        # have a minimum bond distance
-        # perhaps set heuristically to maximum atomic radius for any of the constiuent atoms?
-        warnings.warn("WARNING: Default behavior for interiority check for molecules not yet implemented. No atoms will be removed from Volume or Scene due to collisions with a higher priority Molecule.")
-        return np.zeros(testPoints.shape[0], dtype=bool)
+    # def checkIfInterior(self, testPoints: np.ndarray):
+    #     ## TODO
+    #     # have a minimum bond distance
+    #     # perhaps set heuristically to maximum atomic radius for any of the constiuent atoms?
+    #     warnings.warn("WARNING: Default behavior for interiority check for molecules not yet implemented. No atoms will be removed from Volume or Scene due to collisions with a higher priority Molecule.")
+    #     return np.zeros(testPoints.shape[0], dtype=bool)
 
     @classmethod
     def from_ase_atoms(cls, atoms):
@@ -273,3 +262,17 @@ class Molecule(BaseMolecule):
 
     def __init__(self, species, positions, **kwargs):
         super().__init__(species, positions, **kwargs)
+
+    def __repr__(self) -> str:
+        return f'Molecule(species={repr(self.species)}, positions={repr(self.atoms)})'
+
+    def __eq__(self, other: Molecule) -> bool:
+
+        if isinstance(other, Molecule):
+            pos_check = array_set_equal(self.atoms, other.atoms)
+            if pos_check:
+                x_ind = np.argsort(self.atoms, axis=0)
+                y_ind = np.argsort(other.atoms, axis=0)
+                return np.array_equal(self.species[x_ind], other.species[y_ind])
+        else:
+            return False
