@@ -7,6 +7,7 @@ from numpy import *
 from czone.volume import *
 from czone.generator import *
 from czone.transform import *
+from czone.scene import *
 
 import sys
 

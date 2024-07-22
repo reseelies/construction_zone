@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import List, Union
 
 import numpy as np
@@ -11,6 +12,8 @@ from ..volume import BaseVolume, makeRectPrism, Voxel
 from czone.transform.transform import Translation
 from functools import reduce
 from itertools import product
+
+from czone.util.eset import EqualSet, array_set_equal
 
 class BaseScene(ABC):
 
@@ -209,6 +212,17 @@ class Scene(BaseScene):
         else:
             self.bounds = bounds
 
+    def __repr__(self) -> str:
+        return f'Scene(bounds={repr(self.bounds)}, objects={repr(self.objects)})'
+
+    def __eq__(self, other: Scene) -> bool:
+        if isinstance(other, Scene):
+            bounds_check = np.allclose(self.bounds, other.bounds)
+            object_check = EqualSet(self.objects) == EqualSet(other.objects)
+            return bounds_check and object_check
+        else:
+            return False
+
     @property
     def bounds(self):
         """Current boundaries of nanoscale scene."""
@@ -240,7 +254,7 @@ class PeriodicScene(BaseScene):
         super().__init__()
         self.domain_cell = domain_cell
         self.pbc = pbc
-        if not (objects is None):
+        if objects is not None:
             self.add_object(objects)
 
     def _get_periodic_indices(self, bbox):

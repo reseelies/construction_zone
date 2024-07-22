@@ -192,8 +192,9 @@ class Volume(BaseVolume):
             # TODO: check against the convex hull instead
             ## use hard ands instead of reduce over properties to short circuit
 
+            points_check = (self.points is None and other.points is None) or array_set_equal(self.points, other.points)
             check = self.generator == other.generator and \
-                    array_set_equal(self.points, other.points) and \
+                    points_check and \
                     EqualSet(self.alg_objects) == (EqualSet(other.alg_objects)) and \
                     self.priority == other.priority and \
                     np.isclose(self.tolerance, other.tolerance)

@@ -1,5 +1,8 @@
 import unittest
 import numpy as np
+
+from czone_test_fixtures import czone_TestCase
+
 from czone.volume.volume import Volume
 from czone.volume.algebraic import Sphere
 from czone.molecule import Molecule
@@ -11,7 +14,7 @@ seed = 709123
 rng = np.random.default_rng(seed=seed)
 
 
-class Test_Scene(unittest.TestCase):
+class Test_Scene(czone_TestCase):
 
     def setUp(self):
         self.rng = rng
@@ -36,6 +39,8 @@ class Test_Scene(unittest.TestCase):
         ref_ids = [id(x) for x in spheres]
         test_ids = [id(x) for x in scene.objects]
         self.assertEqual(set(ref_ids), set(test_ids))
+
+        self.assertReprEqual(scene)
 
     def test_get_priorities(self):
 
@@ -163,7 +168,7 @@ class Test_Scene(unittest.TestCase):
 
 
 
-class Test_PeriodicScene(unittest.TestCase):
+class Test_PeriodicScene(czone_TestCase):
 
     def setUp(self) -> None:
         return super().setUp()
