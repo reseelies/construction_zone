@@ -6,7 +6,7 @@ from czone_test_fixtures import czone_TestCase
 from czone.volume import Volume, MultiVolume, Voxel
 from czone.volume.algebraic import Sphere
 from czone.molecule import Molecule
-from czone.scene.scene import Scene
+from czone.scene.scene import Scene, PeriodicScene
 from functools import reduce
 from itertools import repeat
 
@@ -39,13 +39,17 @@ def get_random_domain():
 
     return Voxel(bases, scale, origin)
 
-def get_random_scene(N_max_objects=8, rng=rng):
+def get_random_scene(periodic=False, N_max_objects=8, rng=rng,):
     
     N_objects = rng.integers(1, N_max_objects)
     domain = get_random_domain()
     objects = [get_random_object() for _ in range(N_objects)]
 
-    return Scene(domain, objects)
+    if periodic:
+        pbc = tuple((rng.choice([True, False]) for _ in range(3)))
+        return PeriodicScene(domain, objects, pbc=pbc)
+    else:
+        return Scene(domain, objects)
 
 
 class Test_Scene(czone_TestCase):
@@ -208,6 +212,11 @@ class Test_Scene(czone_TestCase):
 
 class Test_PeriodicScene(czone_TestCase):
 
-    def setUp(self) -> None:
-        return super().setUp()
-    
+    def setUp(self):
+        self.rng = rng
+        self.N_trials = 32
+
+    def test_init(self):
+        for _ in range(self.N_trials):
+            scene = get_random_scene(periodic=True)
+            self.assertReprEqual(scene)    

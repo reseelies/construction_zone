@@ -242,17 +242,30 @@ class Scene(BaseScene):
 
 class PeriodicScene(BaseScene):
     
-    def __init__(self, domain_cell: Voxel, objects=None, pbc=(True, True, True)):
+    def __init__(self, domain: Voxel, objects=None, pbc=(True, True, True)):
         super().__init__()
-        self.domain_cell = domain_cell
+        self.domain = domain
         self.pbc = pbc
         self.add_object(objects)
+    
+    def __repr__(self) -> str:
+        return f'PeriodicScene(domain={repr(self.domain)}, objects={repr(self.objects)}, pbc={self.pbc})'
+
+    def __eq__(self, other: PeriodicScene) -> bool:
+        # TODO: a more expansive equality check should check on the folded periodic images of domain and pbc are equal
+        if isinstance(other, PeriodicScene):
+            domain_check = self.domain == other.domain
+            pbc_check = self.pbc == other.pbc
+            object_check = EqualSet(self.objects) == EqualSet(other.objects)
+            return domain_check and object_check and pbc_check
+        else:
+            return False
 
     def _get_periodic_indices(self, bbox):
         """Get set of translation vectors, in units of the domain cell, for all 
         relevant periodic images to generate."""
 
-        cell_coords = self.domain_cell.get_voxel_coords(bbox)
+        cell_coords = self.domain.get_voxel_coords(bbox)
 
         pos_shifts = cell_coords < 0 # Volume needs to be shifted in positive directions
         neg_shifts = cell_coords >= 1 # Volume needs to be shifted in negative directions
@@ -293,13 +306,13 @@ class PeriodicScene(BaseScene):
             for pidx in periodic_indices:
                 ## For each image, get a copy of volume translated to its periodic imnage
                 pvec = np.array(pidx, dtype=int).reshape((3, -1))
-                tvec = (self.domain_cell.sbases @ pvec).reshape((3))
+                tvec = (self.domain.sbases @ pvec).reshape((3))
                 transformation = [Translation(tvec)]
                 new_vol = ob.from_volume(transformation=transformation)
                 self._periodic_images[id(ob)].append(new_vol)
 
     def _get_folded_positions(self, points):
-        domain_coords = self.domain_cell.get_voxel_coords(points)
+        domain_coords = self.domain.get_voxel_coords(points)
 
         fold_boundary = np.ones_like(domain_coords, dtype=bool)
         for i, p in enumerate(self.pbc):
@@ -307,7 +320,7 @@ class PeriodicScene(BaseScene):
                 fold_boundary[:, i] = False
 
         folded_coords = np.mod(domain_coords, 1.0, out=domain_coords, where=fold_boundary)
-        return self.domain_cell.get_cartesian_coords(folded_coords)
+        return self.domain.get_cartesian_coords(folded_coords)
 
     @property
     def periodic_images(self):
@@ -332,5 +345,5 @@ class PeriodicScene(BaseScene):
         """Collection of atoms in scene as ASE Atoms object."""
         return Atoms(symbols=self.all_species,
                      positions=self.all_atoms,
-                     cell=self.domain_cell.sbases.T,
+                     cell=self.domain.sbases.T,
                      pbc=self.pbc)
