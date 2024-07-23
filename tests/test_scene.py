@@ -17,17 +17,19 @@ from test_volume import get_random_volume
 from test_generator import get_random_generator
 
 
-def get_random_object(rng=rng):
-    vol_type = rng.choice(['Volume', 'MultiVolume'])
+def get_random_object(rng=rng, depth=0):
+    if depth < 2:
+        vol_type = rng.choice(['Volume', 'MultiVolume'])
+    else:
+        vol_type = 'Volume'
 
     match vol_type:
         case 'Volume':
             G = get_random_generator(rng=rng)
             V = get_random_volume(G, N_points=8, rng=rng)
         case 'MultiVolume':
-            N_vols = rng.integers(2,8)
-            Gs = [get_random_generator(rng=rng) for _ in range(N_vols)]
-            Vs = [get_random_volume(N_points=8, generator=g, rng=rng) for g in Gs]
+            N_vols = rng.integers(2,8 - 3*depth)
+            Vs = [get_random_object(rng, depth=depth+1) for _ in range(N_vols)]
             V  = MultiVolume(Vs, priority=rng.integers(-10,10))
             
     return V
