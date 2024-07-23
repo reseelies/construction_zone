@@ -138,6 +138,27 @@ class CylinderNode(BaseAlgebraicNode):
         return Cylinder
 
 @dataclass
+class VoxelNode(BaseNode):
+    bases: np.ndarray
+    origin: np.ndarray
+    scale: float
+
+    @property
+    def base_type(self):
+        return Voxel
+    
+    @property
+    def class_type(self):
+        return Voxel
+    
+    @property
+    def is_leaf(self):
+        return True
+    
+    def add_node(self, node):
+        pass
+
+@dataclass
 class BaseVolumeNode(BaseNode):
     priority: int
 
@@ -236,6 +257,8 @@ class Blueprint():
                return Blueprint.map_volume(obj)
             case BaseScene():
                return Blueprint.map_scene(obj)
+            case Voxel():
+                return Blueprint.map_voxel(obj)
             case _:
                 raise TypeError()
 
@@ -270,7 +293,7 @@ class Blueprint():
                 raise TypeError
             
     @staticmethod
-    def map_volume(V) -> BaseVolumeNode:
+    def map_volume(V: BaseVolume) -> BaseVolumeNode:
         # Should be recursive, to handle multivolumes
         match V:
             case MultiVolume():
@@ -288,7 +311,14 @@ class Blueprint():
         return node
 
     @staticmethod
-    def map_scene(S) -> BaseSceneNode:
+    def map_voxel(V: Voxel) -> VoxelNode:
+        if isinstance(V, Voxel):
+            return VoxelNode(V.bases, V.origin, V.scale)
+        else:
+            raise TypeError
+
+    @staticmethod
+    def map_scene(S: BaseScene) -> BaseSceneNode:
         raise NotImplementedError
 
     ####################
@@ -309,6 +339,8 @@ class Blueprint():
                 return Blueprint.inverse_map_volume(node)
             case BaseSceneNode():
                 return Blueprint.inverse_map_scene(node)
+            case VoxelNode():
+                return Blueprint.inverse_map_voxel(node)
             case _:
                 raise TypeError
 
@@ -362,6 +394,15 @@ class Blueprint():
                 raise TypeError("Base Volumes should not be constructed directly")
             case _:
                 raise TypeError
+            
+    @staticmethod
+    def inverse_map_voxel(node: VoxelNode) -> Voxel:
+        params = {**node}
+        children = params.pop('children')
+        if len(children) != 0:
+            raise ValueError("VoxelNodes should not have children.")
+        
+        return Voxel(**params)
 
     @staticmethod
     def inverse_map_scene(node: BaseSceneNode) -> Scene | PeriodicScene:

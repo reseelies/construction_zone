@@ -3,6 +3,7 @@ from czone_test_fixtures import czone_TestCase
 import numpy as np
 
 from czone.generator import NullGenerator
+from czone.volume import Voxel
 
 from test_generator import get_random_generator, get_random_amorphous_generator
 from test_scene import get_random_scene, get_random_object
@@ -41,6 +42,16 @@ class Test_Blueprint(czone_TestCase):
     def test_volume(self):
         for _ in range(self.N_trials):
             V = get_random_object()
+            blueprint = Blueprint(V)
+            self.assertEqual(V, blueprint.to_object())
+
+    def test_voxel(self):
+        for _ in range(self.N_trials):
+            bases = rng.normal(size=(3,3))
+            scale = rng.uniform(0.1, 10)
+            origin = rng.uniform(-100, 100, size=(3,))
+
+            V = Voxel(bases, scale, origin)
             blueprint = Blueprint(V)
             self.assertEqual(V, blueprint.to_object())
 
