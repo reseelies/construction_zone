@@ -5,7 +5,7 @@ import numpy as np
 from czone.generator import NullGenerator
 
 from test_generator import get_random_generator, get_random_amorphous_generator
-from test_scene import get_random_scene
+from test_scene import get_random_scene, get_random_object
 from test_volume import get_random_volume
 
 from czone.blueprint import Blueprint, Serializer
@@ -40,8 +40,7 @@ class Test_Blueprint(czone_TestCase):
 
     def test_volume(self):
         for _ in range(self.N_trials):
-            V = get_random_volume()
-            V._alg_objects = []
+            V = get_random_object()
             blueprint = Blueprint(V)
             self.assertEqual(V, blueprint.to_object())
 

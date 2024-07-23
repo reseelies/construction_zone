@@ -92,8 +92,10 @@ class GeneratorNode(BaseGeneratorNode):
     @property
     def class_type(self):
         return Generator
-    
+
+@dataclass
 class BaseAlgebraicNode(BaseNode):
+    tol: float
 
     @property
     def is_leaf(self):
@@ -101,6 +103,39 @@ class BaseAlgebraicNode(BaseNode):
     
     def add_node(self, node):
         pass
+
+    @property
+    def base_type(self):
+        return BaseAlgebraic
+
+@dataclass
+class SphereNode(BaseAlgebraicNode):
+    radius: float
+    center: np.ndarray
+
+    @property
+    def class_type(self):
+        return Sphere
+
+@dataclass
+class PlaneNode(BaseAlgebraicNode):
+    normal: np.ndarray
+    point: np.ndarray
+
+    @property
+    def class_type(self):
+        return Plane
+
+@dataclass
+class CylinderNode(BaseAlgebraicNode):
+    axis: np.ndarray
+    point: np.ndarray
+    radius: float
+    length: float
+
+    @property
+    def class_type(self):
+        return Cylinder
 
 @dataclass
 class BaseVolumeNode(BaseNode):
@@ -126,7 +161,7 @@ class VolumeNode(BaseVolumeNode):
     def add_node(self, node):
         match node:
             case BaseGeneratorNode():
-                ## check if there are any Generators in Children
+                ## check if there are any Generators in children
                 is_first_generator = True
                 for i, c in enumerate(self.children):
                     if isinstance(c, BaseGeneratorNode):
@@ -193,7 +228,7 @@ class Blueprint():
         self.mapping = self.forward_map(obj)
 
     @staticmethod
-    def forward_map(obj):
+    def forward_map(obj) -> BaseNode:
         match obj:
             case BaseGenerator():
                return Blueprint.map_generator(obj)
@@ -205,7 +240,7 @@ class Blueprint():
                 raise TypeError()
 
     @staticmethod
-    def map_generator(G: BaseGenerator):
+    def map_generator(G: BaseGenerator) -> BaseGeneratorNode:
         match G:
             case NullGenerator():
                 return NullGeneratorNode()
@@ -223,11 +258,19 @@ class Blueprint():
                 raise TypeError
 
     @staticmethod
-    def map_algebraic(A: BaseAlgebraic):
-        raise NotImplementedError
+    def map_algebraic(A: BaseAlgebraic) -> BaseAlgebraicNode:
+        match A:
+            case Sphere():
+                return SphereNode(tol=A.tol, radius=A.radius, center=A.center)
+            case Plane():
+                return PlaneNode(tol=A.tol, point=A.point, normal=A.normal)
+            case Cylinder():
+                return CylinderNode(tol=A.tol, radius=A.radius, length=A.length, axis=A.axis, point=A.point)
+            case _:
+                raise TypeError
             
     @staticmethod
-    def map_volume(V):
+    def map_volume(V) -> BaseVolumeNode:
         # Should be recursive, to handle multivolumes
         match V:
             case MultiVolume():
@@ -245,7 +288,7 @@ class Blueprint():
         return node
 
     @staticmethod
-    def map_scene(S):
+    def map_scene(S) -> BaseSceneNode:
         raise NotImplementedError
 
     ####################
@@ -274,7 +317,7 @@ class Blueprint():
         params = {**node}
         children = params.pop('children')
         if len(children) != 0:
-            raise ValueError("Generator Nodes should not have children.")
+            raise ValueError("BaseGeneratorNodes should not have children.")
         
         match node:
             case NullGeneratorNode() | AmorphousGeneratorNode():
@@ -291,9 +334,14 @@ class Blueprint():
                 raise TypeError
 
     @staticmethod
-    def inverse_map_algebraic(node: BaseAlgebraicNode) -> Plane | Sphere | Cylinder:
-        raise NotImplementedError
-
+    def inverse_map_algebraic(node: BaseAlgebraicNode) -> Sphere | Plane | Cylinder:
+        params = {**node}
+        children = params.pop('children')
+        if len(children) != 0:
+            raise ValueError("BaseAlgebraicNodes should not have children.")
+        
+        return node.class_type(**params)
+    
     @staticmethod
     def inverse_map_volume(node: BaseVolumeNode) -> Volume | MultiVolume:
         params = {**node}
