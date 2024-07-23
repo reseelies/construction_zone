@@ -2,7 +2,7 @@ from czone_test_fixtures import czone_TestCase
 
 import numpy as np
 
-from test_generator import get_random_generator
+from test_generator import get_random_generator, get_random_amorphous_generator
 from test_scene import get_random_scene
 from test_volume import get_random_volume
 
