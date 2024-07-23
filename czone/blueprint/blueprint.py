@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Mapping
 
 from czone.util.eset import EqualSet
-from czone.volume import BaseVolume, Volume, MultiVolume, Voxel, Plane, Sphere, Cylinder
+from czone.volume import BaseVolume, BaseAlgebraic, Volume, MultiVolume, Voxel, Plane, Sphere, Cylinder
 from czone.scene import BaseScene, Scene, PeriodicScene
 from czone.generator import BaseGenerator, AmorphousGenerator, Generator, NullGenerator
 from czone.molecule import Molecule
@@ -17,7 +17,7 @@ import numpy as np
 class BaseNode(ABC, Mapping):
     # metadata: dict = field(default_factory=dict)
     # name: str = ''
-    children: tuple = tuple()
+    children: list = field(default_factory=list)
 
     @property
     @abstractmethod
@@ -35,7 +35,7 @@ class BaseNode(ABC, Mapping):
         pass
 
     @abstractmethod
-    def add_node(self, new_node):
+    def add_node(self, node):
         pass
 
     def __getitem__(self, key):
@@ -61,7 +61,7 @@ class BaseGeneratorNode(BaseNode):
     def is_leaf(self):
         return True
     
-    def add_node(self):
+    def add_node(self, node):
         pass
 
 class NullGeneratorNode(BaseGeneratorNode):
@@ -92,7 +92,68 @@ class GeneratorNode(BaseGeneratorNode):
     @property
     def class_type(self):
         return Generator
+    
+class BaseAlgebraicNode(BaseNode):
 
+    @property
+    def is_leaf(self):
+        return True
+    
+    def add_node(self, node):
+        pass
+
+@dataclass
+class BaseVolumeNode(BaseNode):
+    priority: int
+
+    @property
+    def base_type(self):
+        return BaseVolume
+    
+    @property
+    def class_type(self):
+        return BaseVolume
+
+    @property
+    def is_leaf(self):
+        return False
+
+@dataclass    
+class VolumeNode(BaseVolumeNode):
+    tolerance: float
+    points: np.ndarray | None
+    
+    def add_node(self, node):
+        match node:
+            case BaseGeneratorNode():
+                ## check if there are any Generators in Children
+                is_first_generator = True
+                for i, c in enumerate(self.children):
+                    if isinstance(c, BaseGeneratorNode):
+                        is_first_generator = False
+                        break
+
+                if is_first_generator:
+                    self.children.append(node)
+                else:
+                    self.children[i] = node
+
+            case BaseAlgebraicNode():
+                self.children.append(node)
+            case _:
+                raise TypeError("VolumeNodes can only be parent to BaseGeneratorNodes")
+
+class MultiVolumeNode(BaseVolumeNode):
+    def add_node(self, node):
+        match node:
+            case VolumeNode() | MultiVolumeNode():
+                self.children.append(node)
+            case _:
+                raise TypeError("MultiVolumeNodes can only be parent to other MultiVolumes or Volumes")
+
+class BaseSceneNode(BaseNode):
+    def __init__(self, *args, **kwargs):
+        raise NotImplementedError
 
 class Blueprint():
     """
@@ -123,8 +184,28 @@ class Blueprint():
             self._mapping = node
         else:
             raise TypeError
+        
+    ####################
+    # Forward mappings #
+    ####################
 
-    def map_generator(self, G: BaseGenerator):
+    def get_mapping(self, obj):
+        self.mapping = self.forward_map(obj)
+
+    @staticmethod
+    def forward_map(obj):
+        match obj:
+            case BaseGenerator():
+               return Blueprint.map_generator(obj)
+            case BaseVolume():
+               return Blueprint.map_volume(obj)
+            case BaseScene():
+               return Blueprint.map_scene(obj)
+            case _:
+                raise TypeError()
+
+    @staticmethod
+    def map_generator(G: BaseGenerator):
         match G:
             case NullGenerator():
                 return NullGeneratorNode()
@@ -139,27 +220,57 @@ class Blueprint():
                           'post_transform':G.post_transform}
                 return GeneratorNode(**params)
             case _:
-                raise NotImplementedError
+                raise TypeError
+
+    @staticmethod
+    def map_algebraic(A: BaseAlgebraic):
+        raise NotImplementedError
             
-    def map_volume(self, V):
+    @staticmethod
+    def map_volume(V):
         # Should be recursive, to handle multivolumes
-        raise NotImplementedError
-
-    def map_scene(self, S):
-        raise NotImplementedError
-
-    def get_mapping(self, obj):
-        match obj:
-            case BaseGenerator():
-                self.mapping = self.map_generator(obj)
-            case BaseVolume():
-                self.mapping = self.map_volume(obj)
-            case BaseScene():
-                self.mapping = self.map_scene(obj)
+        match V:
+            case MultiVolume():
+                node = MultiVolumeNode(V.priority)
+                for o in V.volumes:
+                    node.add_node(Blueprint.map_volume(o))
+            case Volume():
+                node = VolumeNode(priority=V.priority, tolerance=V.tolerance, points=V.points)
+                node.add_node(Blueprint.map_generator(V.generator))
+                for o in V.alg_objects:
+                    node.add_node(Blueprint.map_algebraic(o))
             case _:
-                raise TypeError()
-            
-    def inverse_map_generator(self, node: BaseGeneratorNode) -> NullGenerator | Generator | AmorphousGenerator:
+                raise TypeError
+
+        return node
+
+    @staticmethod
+    def map_scene(S):
+        raise NotImplementedError
+
+    ####################
+    # Inverse mappings #
+    ####################
+    
+    def to_object(self):
+        return self.inverse_map(self.mapping)
+    
+    @staticmethod
+    def inverse_map(node):
+        match node:
+            case BaseGeneratorNode():
+                return Blueprint.inverse_map_generator(node)
+            case BaseAlgebraicNode():
+                return Blueprint.inverse_map_algebraic(node)
+            case BaseVolumeNode():
+                return Blueprint.inverse_map_volume(node)
+            case BaseSceneNode():
+                return Blueprint.inverse_map_scene(node)
+            case _:
+                raise TypeError
+
+    @staticmethod
+    def inverse_map_generator(node: BaseGeneratorNode) -> NullGenerator | Generator | AmorphousGenerator:
         params = {**node}
         children = params.pop('children')
         if len(children) != 0:
@@ -179,10 +290,31 @@ class Blueprint():
             case _:
                 raise TypeError
 
-    
-    def to_object(self):
-        match self.mapping:
-            case BaseGeneratorNode():
-                return self.inverse_map_generator(self.mapping)
+    @staticmethod
+    def inverse_map_algebraic(node: BaseAlgebraicNode) -> Plane | Sphere | Cylinder:
+        raise NotImplementedError
+
+    @staticmethod
+    def inverse_map_volume(node: BaseVolumeNode) -> Volume | MultiVolume:
+        params = {**node}
+        children = params.pop('children')
+        match node:
+            case MultiVolumeNode():
+                volumes = [Blueprint.inverse_map_volume(c) for c in children]
+                return MultiVolume(volumes, **params)
+            case VolumeNode():
+                params['alg_objects'] = []
+                for c in children:
+                    if isinstance(c, BaseAlgebraicNode):
+                        params['alg_objects'].append(Blueprint.inverse_map_algebraic(c))
+                    else:
+                        params['generator'] = Blueprint.inverse_map_generator(c)
+                return Volume(**params)
+            case BaseVolumeNode():
+                raise TypeError("Base Volumes should not be constructed directly")
             case _:
-                raise NotImplementedError
+                raise TypeError
+
+    @staticmethod
+    def inverse_map_scene(node: BaseSceneNode) -> Scene | PeriodicScene:
+        raise NotImplementedError

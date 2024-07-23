@@ -25,19 +25,23 @@ class Test_Blueprint(czone_TestCase):
         n_G = NullGenerator()
         n_blueprint = Blueprint(n_G)
         self.assertEqual(n_G, n_blueprint.to_object())
+        self.assertReprEqual(n_G)
 
         for _ in range(self.N_trials):
             a_G = get_random_amorphous_generator(rng=rng)
             a_blueprint = Blueprint(a_G)
+            self.assertReprEqual(a_G)
             self.assertEqual(a_G, a_blueprint.to_object())
 
             G = get_random_generator(rng=rng)
             blueprint = Blueprint(G)
+            self.assertReprEqual(G)
             self.assertEqual(G, blueprint.to_object())
 
     def test_volume(self):
         for _ in range(self.N_trials):
             V = get_random_volume()
+            V._alg_objects = []
             blueprint = Blueprint(V)
             self.assertEqual(V, blueprint.to_object())
 
