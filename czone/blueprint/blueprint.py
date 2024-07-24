@@ -208,8 +208,48 @@ class MultiVolumeNode(BaseVolumeNode):
                 raise TypeError("MultiVolumeNodes can only be parent to other MultiVolumes or Volumes")
 
 class BaseSceneNode(BaseNode):
-    def __init__(self, *args, **kwargs):
-        raise NotImplementedError
+
+    @property
+    def base_type(self):
+        return BaseScene
+    
+    @property
+    def is_leaf(self):
+        return False
+    
+    def add_node(self, node):
+        match node:
+            case VoxelNode():
+                is_first_voxel = True
+                for i, c in enumerate(self.children):
+                    if isinstance(c, VoxelNode):
+                        is_first_voxel = False
+                        break
+
+                if is_first_voxel:
+                    self.children.append(node)
+                else:
+                    self.children[i] = node
+
+            case BaseVolumeNode():
+                self.children.append(node)
+            case _:
+                raise TypeError
+
+class SceneNode(BaseSceneNode):
+
+    @property
+    def class_type(self):
+        return Scene
+    
+@dataclass
+class PeriodicSceneNode(BaseSceneNode):
+    pbc: tuple[bool]
+
+    @property
+    def class_type(self):
+        return PeriodicScene
+
 
 class Blueprint():
     """
@@ -260,10 +300,10 @@ class Blueprint():
             case Voxel():
                 return Blueprint.map_voxel(obj)
             case _:
-                raise TypeError()
+                raise TypeError
 
     @staticmethod
-    def map_generator(G: BaseGenerator) -> BaseGeneratorNode:
+    def map_generator(G: BaseGenerator) -> NullGeneratorNode | AmorphousGeneratorNode | GeneratorNode:
         match G:
             case NullGenerator():
                 return NullGeneratorNode()
@@ -281,7 +321,7 @@ class Blueprint():
                 raise TypeError
 
     @staticmethod
-    def map_algebraic(A: BaseAlgebraic) -> BaseAlgebraicNode:
+    def map_algebraic(A: BaseAlgebraic) -> SphereNode | PlaneNode | CylinderNode:
         match A:
             case Sphere():
                 return SphereNode(tol=A.tol, radius=A.radius, center=A.center)
@@ -293,7 +333,7 @@ class Blueprint():
                 raise TypeError
             
     @staticmethod
-    def map_volume(V: BaseVolume) -> BaseVolumeNode:
+    def map_volume(V: BaseVolume) -> VolumeNode | MultiVolumeNode:
         # Should be recursive, to handle multivolumes
         match V:
             case MultiVolume():
@@ -318,9 +358,21 @@ class Blueprint():
             raise TypeError
 
     @staticmethod
-    def map_scene(S: BaseScene) -> BaseSceneNode:
-        raise NotImplementedError
+    def map_scene(S: BaseScene) -> SceneNode | PeriodicSceneNode:
+        match S:
+            case Scene():
+                node = SceneNode()
+            case PeriodicScene():
+                node = PeriodicSceneNode(pbc=S.pbc)
+            case _:
+                raise TypeError
+            
+        node.add_node(Blueprint.map_voxel(S.domain))
+        for o in S.objects:
+            node.add_node(Blueprint.map_volume(o))
 
+        return node
+    
     ####################
     # Inverse mappings #
     ####################
@@ -329,7 +381,7 @@ class Blueprint():
         return self.inverse_map(self.mapping)
     
     @staticmethod
-    def inverse_map(node):
+    def inverse_map(node: BaseNode):
         match node:
             case BaseGeneratorNode():
                 return Blueprint.inverse_map_generator(node)
@@ -406,4 +458,21 @@ class Blueprint():
 
     @staticmethod
     def inverse_map_scene(node: BaseSceneNode) -> Scene | PeriodicScene:
-        raise NotImplementedError
+        if not isinstance(node, BaseSceneNode):
+            raise TypeError
+
+        params = {**node}
+        children = params.pop('children')
+
+        params['objects'] = []
+
+        for c in children:
+            match c:
+                case VoxelNode():
+                    params['domain'] = Blueprint.inverse_map_voxel(c)
+                case BaseVolumeNode():
+                    params['objects'].append(Blueprint.inverse_map_volume(c))
+                case _:
+                    raise TypeError
+                
+        return node.class_type(**params)
