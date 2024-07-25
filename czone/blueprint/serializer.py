@@ -160,11 +160,6 @@ class toml_Serializer(BaseSerializer):
             bdict = tomlkit.load(f).unwrap()
 
         node = json_Serializer.from_dict(bdict)
-        nd = {**node}
-        for k, v in nd.items():
-            if k == 'children':
-                continue
-            print(f'{k} : {type(v)} : {v}')
         return Blueprint(node)
 
     
