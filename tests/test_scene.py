@@ -17,33 +17,35 @@ from test_volume import get_random_volume
 from test_generator import get_random_generator
 
 
-def get_random_object(rng=rng):
-    vol_type = rng.choice(['Volume', 'MultiVolume'])
+def get_random_object(rng=rng, depth=0, generator_args={}):
+    if depth < 2:
+        vol_type = rng.choice(['Volume', 'MultiVolume'])
+    else:
+        vol_type = 'Volume'
 
     match vol_type:
         case 'Volume':
-            G = get_random_generator(rng=rng)
+            G = get_random_generator(rng=rng, **generator_args)
             V = get_random_volume(G, N_points=8, rng=rng)
         case 'MultiVolume':
-            N_vols = rng.integers(2,8)
-            Gs = [get_random_generator(rng=rng) for _ in range(N_vols)]
-            Vs = [get_random_volume(N_points=8, generator=g, rng=rng) for g in Gs]
+            N_vols = rng.integers(2,8 - 3*depth)
+            Vs = [get_random_object(rng, depth=depth+1, generator_args=generator_args) for _ in range(N_vols)]
             V  = MultiVolume(Vs, priority=rng.integers(-10,10))
             
     return V
 
-def get_random_domain():
+def get_random_domain(rng=rng):
     bases = rng.normal(size=(3,3))
     scale = rng.uniform(0.1, 10)
     origin = rng.uniform(-100, 100, size=(3,))
 
     return Voxel(bases, scale, origin)
 
-def get_random_scene(periodic=False, N_max_objects=8, rng=rng,):
+def get_random_scene(periodic=False, N_max_objects=8, rng=rng, generator_args={}):
     
     N_objects = rng.integers(1, N_max_objects)
-    domain = get_random_domain()
-    objects = [get_random_object() for _ in range(N_objects)]
+    domain = get_random_domain(rng=rng)
+    objects = [get_random_object(rng=rng, generator_args=generator_args) for _ in range(N_objects)]
 
     if periodic:
         pbc = tuple((bool(rng.choice([True, False])) for _ in range(3)))

@@ -265,8 +265,8 @@ class PeriodicScene(BaseScene):
     @pbc.setter
     def pbc(self, val):
         if len(val) == 3:
-            if reduce(lambda x, y: x and y, [isinstance(v, bool) for v in val]):
-                self._pbc = val
+            if reduce(lambda x, y: x and y, [np.issubdtype(type(v), bool) for v in val]):
+                self._pbc = tuple(val)
             else:
                 raise TypeError
         else:
