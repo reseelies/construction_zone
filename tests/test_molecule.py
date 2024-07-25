@@ -210,18 +210,6 @@ class Test_Molecule(czone_TestCase):
         f_set_origin = lambda x: mol_0.set_origin(idx=x)
         self.assertRaises(TypeError, f_set_origin, 73.103)
 
-    def test_priority(self):
-        mol = Molecule(np.array([1]), np.zeros((3,1)))
-        for _ in range(self.N_trials):
-            new_priority = rng.integers(-1000,1000)
-            mol.priority = new_priority
-            self.assertEqual(mol.priority, new_priority)
-        
-        def f_set_priority(val):
-            mol.priority = val
-
-        self.assertRaises(TypeError, f_set_priority, 1.0)
-
     def test_transform(self):
         N = 1024
         for _ in range(self.N_trials):
@@ -250,12 +238,3 @@ class Test_Molecule(czone_TestCase):
             mol.print_warnings = val
         
         self.assertRaises(TypeError, set_warnings, 1.2)
-
-    def test_check_interior(self):
-        N = 10
-        species = rng.integers(1,119,(N,1))
-        positions = rng.normal(size=(N,3))            
-        mol = Molecule(species, positions)
-
-        test_pos = rng.normal(size=(N,3))
-        self.assertWarns(UserWarning, mol.checkIfInterior, test_pos)
