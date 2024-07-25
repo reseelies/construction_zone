@@ -66,7 +66,7 @@ class Test_Serializer(czone_TestCase):
     def setUp(self):
         self.N_trials = 32
         # self.formats = ['h5', 'json']
-        self.formats = ['json']
+        self.formats = ['json', 'yaml']
         self.generator_args = {'with_strain':False, 'with_sub':False}
 
     def test_generator(self):

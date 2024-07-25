@@ -9,6 +9,24 @@ from pathlib import Path
 import numpy as np
 import json
 
+try:
+    import yaml
+    YAML_AVAILABLE = True
+except ImportError as e:
+    YAML_AVAILABLE = False
+
+try:
+    import tomli
+    TOML_AVAILABLE = True
+except ImportError as e:
+    TOML_AVAILABLE = False
+
+try:
+    import h5py
+    H5PY_AVAIALBLE = True
+except ImportError as e:
+    H5PY_AVAIALBLE = False
+
 class BaseSerializer(ABC):
     
     def __init__():
@@ -111,11 +129,20 @@ class yaml_Serializer(BaseSerializer):
 
     @staticmethod
     def serialize(filepath: Path | str, blueprint: Blueprint, **kwargs) -> None:
-        raise NotImplementedError
+        bdict = json_Serializer.to_dict(blueprint.mapping)
+
+        with open(filepath, 'w') as f:
+            yaml.dump(bdict, f, **kwargs)
 
     @staticmethod
     def deserialize(filepath: Path | str, **kwargs) -> Blueprint:
-        raise NotImplementedError
+
+        with open(filepath, 'r') as f:
+            bdict = yaml.full_load(f)
+
+        node = json_Serializer.from_dict(bdict)
+        return Blueprint(node)
+
     
 class Serializer(BaseSerializer):
     """Dispatch class."""
@@ -131,7 +158,10 @@ class Serializer(BaseSerializer):
             case 'json':
                 return json_Serializer.serialize(filepath, blueprint, **kwargs)
             case 'yaml':
-                return yaml_Serializer.serialize(filepath, blueprint, **kwargs)
+                if YAML_AVAILABLE:
+                    return yaml_Serializer.serialize(filepath, blueprint, **kwargs)
+                else:
+                    raise ValueError('yaml support not available. Please insall pyyaml: https://pyyaml.org')
             case _:
                 raise ValueError(f"Unsupported format {output_format} detected or passed in.")
 
@@ -151,4 +181,3 @@ class Serializer(BaseSerializer):
                 raise ValueError(f"Unsupported format {input_format} detected or passed in.")
 
 
-    

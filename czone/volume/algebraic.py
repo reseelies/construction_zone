@@ -121,7 +121,7 @@ class Sphere(BaseAlgebraic):
     @radius.setter
     def radius(self, radius: float):
         if radius > 0.0:
-            self._radius = radius
+            self._radius = float(radius)
         else:
             raise ValueError("Radius needs to be positive valued.")
 
