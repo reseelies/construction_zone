@@ -203,14 +203,23 @@ class Serializer(BaseSerializer):
         input_format = kwargs.get('format', str(filepath).rsplit('.')[-1])
 
         match input_format:
-            case 'h5' | 'H5' | 'hdf5':
-                return h5_Serializer.deserialize(filepath, **kwargs)
             case 'json':
                 return json_Serializer.deserialize(filepath, **kwargs)
+            case 'h5' | 'H5' | 'hdf5':
+                if H5PY_AVAIALBLE:
+                    return h5_Serializer.deserialize(filepath, **kwargs)
+                else:
+                    raise ValueError('hdf5 support not available. Please install h5py: https://docs.h5py.org/')
             case 'yaml':
-                return yaml_Serializer.deserialize(filepath, **kwargs)
+                if YAML_AVAILABLE:
+                    return yaml_Serializer.deserialize(filepath, **kwargs)
+                else:
+                    raise ValueError('yaml support not available. Please insall pyyaml: https://pyyaml.org')
             case 'toml':
-                return toml_Serializer.deserialize(filepath, **kwargs)
+                if TOML_AVAILABLE:
+                    return toml_Serializer.deserialize(filepath, **kwargs)
+                else:
+                    raise ValueError('toml support not available. Please insall tomlkit: https://tomlkit.readthedocs.io/en')
             case _:
                 raise ValueError(f"Unsupported format {input_format} detected or passed in.")
 
