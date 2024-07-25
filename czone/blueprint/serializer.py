@@ -54,17 +54,6 @@ class BaseSerializer(ABC):
         """Alias for deserialize."""
         return cls.deserialize(filepath, **kwargs)
 
-
-class h5_Serializer(BaseSerializer):
-
-    @staticmethod
-    def serialize(filepath: Path | str, blueprint: Blueprint, **kwargs) -> None:
-        raise NotImplementedError
-
-    @staticmethod
-    def deserialize(filepath: Path | str, **kwargs) -> Blueprint:
-        raise NotImplementedError
-
 class json_Serializer(BaseSerializer):
 
     @staticmethod
@@ -127,6 +116,7 @@ class json_Serializer(BaseSerializer):
         return Blueprint(node)
 
 class yaml_Serializer(BaseSerializer):
+    # TODO: prettier formatting
 
     @staticmethod
     def serialize(filepath: Path | str, blueprint: Blueprint, **kwargs) -> None:
@@ -145,7 +135,7 @@ class yaml_Serializer(BaseSerializer):
         return Blueprint(node)
 
 class toml_Serializer(BaseSerializer):
-
+    # TODO: prettier formatting
     @staticmethod
     def serialize(filepath: Path | str, blueprint: Blueprint, **kwargs) -> None:
         bdict = json_Serializer.to_dict(blueprint.mapping)
@@ -161,6 +151,76 @@ class toml_Serializer(BaseSerializer):
 
         node = json_Serializer.from_dict(bdict)
         return Blueprint(node)
+    
+class h5_Serializer(BaseSerializer):
+    # TODO: For now, adopting basic dictionary unfolding stategy, as in json, yaml, and toml
+    # In future, for slightly more efficient packing, could adopt class-packing approach
+    # e.g., if volume owns many planes can pack all plane params into one large array
+    @staticmethod
+    def write_node_to_group(node: BaseNode, group: h5py.Group, **kwargs) -> None:
+        params = {**node}
+        children = params.pop('children')
+
+        group_name = kwargs.get('name', node.class_type.__name__)
+        G = group.create_group(group_name)
+        for k, v in params.items():
+            match v:
+                case None:
+                    continue
+                case np.ndarray():
+                    dset = G.create_dataset(k, data=v)
+                case _:
+                    G.attrs[k] = v
+
+        if len(children) > 0:
+            # Get counters for children by type
+            child_types = set([n.class_type for n in children])
+            counters = {t:0 for t in child_types}
+
+            for n in children:
+                t = n.class_type
+                name = f'{t.__name__}_{counters[t]}'
+                h5_Serializer.write_node_to_group(n, G, name=name)
+                counters[t] += 1
+
+    @staticmethod
+    def read_node_from_group(group: h5py.Group) -> BaseNode:
+
+        class_name = group.name.rsplit('/', 1)[-1].split('_')[0]
+
+        params = dict(group.attrs)
+
+        children = []
+        for k in group.keys():
+            if isinstance(group[k], h5py.Dataset):
+                params[k] = np.array(group[k])
+            else:
+                children.append(k)
+
+        node = NodeMap[class_name](**params)
+        for cg in children:
+            node.add_node(h5_Serializer.read_node_from_group(group[cg]))
+
+        return node
+
+
+    @staticmethod
+    def serialize(filepath: Path | str, blueprint: Blueprint, **kwargs) -> None:
+        head_node = blueprint.mapping
+        with h5py.File(filepath, mode='w') as f:
+            h5_Serializer.write_node_to_group(head_node, f)
+
+    @staticmethod
+    def deserialize(filepath: Path | str, **kwargs) -> Blueprint:
+        with h5py.File(filepath, mode='r') as f:
+            root_groups = list(f.keys())
+            if len(root_groups) > 1:
+                raise ValueError
+
+            root_group = f[root_groups[0]]
+            head_node = h5_Serializer.read_node_from_group(root_group)
+
+        return Blueprint(head_node)
 
     
 class Serializer(BaseSerializer):

@@ -65,8 +65,7 @@ class Test_Serializer(czone_TestCase):
     """blueprint -> serialized form -> blueprint"""
     def setUp(self):
         self.N_trials = 16
-        # self.formats = ['h5', 'json']
-        self.formats = ['json', 'yaml', 'toml']
+        self.formats = ['json', 'yaml', 'toml', 'h5']
         self.generator_args = {'with_strain':False, 'with_sub':False}
 
     def test_generator(self):
