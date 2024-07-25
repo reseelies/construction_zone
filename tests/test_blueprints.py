@@ -7,7 +7,6 @@ from czone.volume import Voxel
 
 from test_generator import get_random_generator, get_random_amorphous_generator
 from test_scene import get_random_scene, get_random_object
-from test_volume import get_random_volume
 
 from czone.blueprint import Blueprint, Serializer
 
@@ -57,16 +56,17 @@ class Test_Blueprint(czone_TestCase):
 
     def test_scene(self):
         for _ in range(self.N_trials):
-            S = get_random_scene()
-            blueprint = Blueprint(S)
-            self.assertEqual(S, blueprint.to_object())
+            for periodic in [False, True]:
+                S = get_random_scene(periodic=periodic)
+                blueprint = Blueprint(S)
+                self.assertEqual(S, blueprint.to_object())
 
 class Test_Serializer(czone_TestCase):
     """blueprint -> serialized form -> blueprint"""
     def setUp(self):
-        self.N_trials = 32
+        self.N_trials = 16
         # self.formats = ['h5', 'json']
-        self.formats = ['json', 'yaml']
+        self.formats = ['json', 'yaml', 'toml']
         self.generator_args = {'with_strain':False, 'with_sub':False}
 
     def test_generator(self):
@@ -95,11 +95,12 @@ class Test_Serializer(czone_TestCase):
 
     def test_scene(self):
         for _ in range(self.N_trials):
-            S = get_random_scene(generator_args=self.generator_args)
-            blueprint = Blueprint(S)
-            for f in self.formats:
-                test_path = 'scene_test_file' + '.' + f
-                Serializer.write(Path(test_path), blueprint)
+            for periodic in [False, True]:
+                S = get_random_scene(periodic=periodic, generator_args=self.generator_args)
+                blueprint = Blueprint(S)
+                for f in self.formats:
+                    test_path = 'scene_test_file' + '.' + f
+                    Serializer.write(Path(test_path), blueprint)
 
-                test_S = Serializer.read(Path(test_path)).to_object()
-                self.assertEqual(S, test_S)
+                    test_S = Serializer.read(Path(test_path)).to_object()
+                    self.assertEqual(S, test_S)

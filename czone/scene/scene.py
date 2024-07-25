@@ -266,7 +266,7 @@ class PeriodicScene(BaseScene):
     def pbc(self, val):
         if len(val) == 3:
             if reduce(lambda x, y: x and y, [isinstance(v, bool) for v in val]):
-                self._pbc = val
+                self._pbc = tuple(val)
             else:
                 raise TypeError
         else:

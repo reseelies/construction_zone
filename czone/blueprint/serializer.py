@@ -16,7 +16,7 @@ except ImportError as e:
     YAML_AVAILABLE = False
 
 try:
-    import tomli
+    import tomlkit
     TOML_AVAILABLE = True
 except ImportError as e:
     TOML_AVAILABLE = False
@@ -70,10 +70,11 @@ class json_Serializer(BaseSerializer):
     @staticmethod
     def to_dict(node: BaseNode) -> dict:
 
-        res = {**node}
+        res = {k:v for k, v in node.items() if v is not None}
         for k in res.keys():
             if isinstance(res[k], np.ndarray):
                 res[k] = res[k].tolist()
+            
         res['_class_type'] = node.class_type.__name__ # force to be first in sort order
         try:
             children = res.pop('children')
@@ -143,6 +144,29 @@ class yaml_Serializer(BaseSerializer):
         node = json_Serializer.from_dict(bdict)
         return Blueprint(node)
 
+class toml_Serializer(BaseSerializer):
+
+    @staticmethod
+    def serialize(filepath: Path | str, blueprint: Blueprint, **kwargs) -> None:
+        bdict = json_Serializer.to_dict(blueprint.mapping)
+
+        with open(filepath, 'w') as f:
+            tomlkit.dump(bdict, f)
+
+    @staticmethod
+    def deserialize(filepath: Path | str, **kwargs) -> Blueprint:
+
+        with open(filepath, 'r') as f:
+            bdict = tomlkit.load(f).unwrap()
+
+        node = json_Serializer.from_dict(bdict)
+        nd = {**node}
+        for k, v in nd.items():
+            if k == 'children':
+                continue
+            print(f'{k} : {type(v)} : {v}')
+        return Blueprint(node)
+
     
 class Serializer(BaseSerializer):
     """Dispatch class."""
@@ -153,15 +177,23 @@ class Serializer(BaseSerializer):
         output_format = kwargs.get('format', str(filepath).rsplit('.')[-1])
 
         match output_format:
-            case 'h5' | 'H5' | 'hdf5':
-                return h5_Serializer.serialize(filepath, blueprint, **kwargs)
             case 'json':
                 return json_Serializer.serialize(filepath, blueprint, **kwargs)
+            case 'h5' | 'H5' | 'hdf5':
+                if H5PY_AVAIALBLE:
+                    return h5_Serializer.serialize(filepath, blueprint, **kwargs)
+                else:
+                    raise ValueError('hdf5 support not available. Please install h5py: https://docs.h5py.org/')
             case 'yaml':
                 if YAML_AVAILABLE:
                     return yaml_Serializer.serialize(filepath, blueprint, **kwargs)
                 else:
                     raise ValueError('yaml support not available. Please insall pyyaml: https://pyyaml.org')
+            case 'toml':
+                if TOML_AVAILABLE:
+                    return toml_Serializer.serialize(filepath, blueprint, **kwargs)
+                else:
+                    raise ValueError('toml support not available. Please insall tomlkit: https://tomlkit.readthedocs.io/en')
             case _:
                 raise ValueError(f"Unsupported format {output_format} detected or passed in.")
 
@@ -177,6 +209,8 @@ class Serializer(BaseSerializer):
                 return json_Serializer.deserialize(filepath, **kwargs)
             case 'yaml':
                 return yaml_Serializer.deserialize(filepath, **kwargs)
+            case 'toml':
+                return toml_Serializer.deserialize(filepath, **kwargs)
             case _:
                 raise ValueError(f"Unsupported format {input_format} detected or passed in.")
 
