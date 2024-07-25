@@ -69,7 +69,7 @@ class BaseVolume(ABC):
         if not np.issubdtype(type(priority), np.integer):
             raise TypeError("Priority needs to be integer valued")
 
-        self._priority = priority
+        self._priority = int(priority)
 
     @abstractmethod
     def transform(self, transformation):

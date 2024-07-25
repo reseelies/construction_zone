@@ -15,10 +15,17 @@ import numpy as np
 
 @dataclass(kw_only=True)
 class BaseNode(ABC, Mapping):
-    # metadata: dict = field(default_factory=dict)
-    # name: str = ''
     children: list = field(default_factory=list)
 
+    # Do some type enforcement
+    # ala https://stackoverflow.com/a/58992994
+    def __post_init__(self):
+        for name, field_type in self.__annotations__.items():
+            if field_type == np.ndarray:
+                setattr(self, 
+                        name,
+                        np.array(getattr(self, name)))
+        
     @property
     @abstractmethod
     def is_leaf(self) -> bool:
@@ -86,7 +93,7 @@ class GeneratorNode(BaseGeneratorNode):
     lattice_matrix: np.ndarray
     basis_species: tuple[int]
     basis_coords: np.ndarray
-    strain_field: BaseStrain | None = None
+    strain_field: BaseStrain | None = None # TODO: move to children?
     post_transform: BasePostTransform | None = None
 
     @property
@@ -167,17 +174,13 @@ class BaseVolumeNode(BaseNode):
         return BaseVolume
     
     @property
-    def class_type(self):
-        return BaseVolume
-
-    @property
     def is_leaf(self):
         return False
 
 @dataclass    
 class VolumeNode(BaseVolumeNode):
     tolerance: float
-    points: np.ndarray | None
+    points: np.ndarray
     
     def add_node(self, node):
         match node:
@@ -199,6 +202,10 @@ class VolumeNode(BaseVolumeNode):
             case _:
                 raise TypeError("VolumeNodes can only be parent to BaseGeneratorNodes")
 
+    @property
+    def class_type(self):
+        return Volume
+
 class MultiVolumeNode(BaseVolumeNode):
     def add_node(self, node):
         match node:
@@ -206,6 +213,10 @@ class MultiVolumeNode(BaseVolumeNode):
                 self.children.append(node)
             case _:
                 raise TypeError("MultiVolumeNodes can only be parent to other MultiVolumes or Volumes")
+
+    @property
+    def class_type(self):
+        return MultiVolume
 
 class BaseSceneNode(BaseNode):
 
@@ -251,6 +262,33 @@ class PeriodicSceneNode(BaseSceneNode):
         return PeriodicScene
 
 
+# If this were to grow significantly, perhaps it'd be better
+# to utilize some class property implementation (see: https://stackoverflow.com/a/76301341)
+# so that we can pull the class type name automatically in a comprehension,
+# e.g. {n.class_type.__name__ : n.class_type for n in [nodes]}
+
+## Used in Serializers
+BaseNodeMap = {
+    'NullGenerator':NullGeneratorNode,
+    'AmorphousGenerator':AmorphousGeneratorNode,
+    'Generator':GeneratorNode,
+    'Sphere':SphereNode,
+    'Plane':PlaneNode,
+    'Cylinder':CylinderNode,
+    'Voxel':VoxelNode,
+    'Volume':VolumeNode,
+    'MultiVolume':MultiVolumeNode,
+    'Scene':SceneNode,
+    'PeriodicScene':PeriodicSceneNode
+}
+
+## Let class types be serialized as lowercase and uppercase
+NodeMap = {**BaseNodeMap,
+**{k.lower():v for k, v in BaseNodeMap.items()},
+**{k.upper():v for k, v in BaseNodeMap.items()},
+}
+
+
 class Blueprint():
     """
     Represents (Periodic)Scenes, (Multi)Volumes, and Generators 
@@ -259,7 +297,7 @@ class Blueprint():
     def __init__(self, obj):
         self.get_mapping(obj)
 
-    def __repr__(self, other):
+    def __repr__(self):
         return f"Blueprint({repr(self.to_object())})"
 
     def __eq__(self, other):
@@ -286,7 +324,10 @@ class Blueprint():
     ####################
 
     def get_mapping(self, obj):
-        self.mapping = self.forward_map(obj)
+        if isinstance(obj, BaseNode):
+            self.mapping = obj
+        else:
+            self.mapping = self.forward_map(obj)
 
     @staticmethod
     def forward_map(obj) -> BaseNode:

@@ -1,6 +1,13 @@
 from abc  import ABC, abstractmethod
-from czone.blueprint import Blueprint
+from czone.blueprint.blueprint import (
+    Blueprint, 
+    BaseNode,
+    NodeMap,
+)
 from pathlib import Path
+
+import numpy as np
+import json
 
 class BaseSerializer(ABC):
     
@@ -27,7 +34,7 @@ class BaseSerializer(ABC):
     @classmethod
     def read(cls, filepath: Path | str, **kwargs) -> Blueprint:
         """Alias for deserialize."""
-        cls.deserialize(filepath, **kwargs)
+        return cls.deserialize(filepath, **kwargs)
 
 
 class h5_Serializer(BaseSerializer):
@@ -43,12 +50,62 @@ class h5_Serializer(BaseSerializer):
 class json_Serializer(BaseSerializer):
 
     @staticmethod
+    def to_dict(node: BaseNode) -> dict:
+
+        res = {**node}
+        for k in res.keys():
+            if isinstance(res[k], np.ndarray):
+                res[k] = res[k].tolist()
+        res['_class_type'] = node.class_type.__name__ # force to be first in sort order
+        try:
+            children = res.pop('children')
+        except KeyError:
+            children = []
+
+        if len(children) > 0:
+            res['children'] = [json_Serializer.to_dict(n) for n in children]
+
+        return res
+    
+    @staticmethod
+    def from_dict(bdict: dict) -> BaseNode:
+
+        try:
+            children = bdict.pop('children')
+        except KeyError:
+            children = []
+
+        res = NodeMap[bdict.pop('_class_type')](**bdict)
+        for n in children:
+            res.add_node(json_Serializer.from_dict(n))
+
+        return res
+
+    @staticmethod
     def serialize(filepath: Path | str, blueprint: Blueprint, **kwargs) -> None:
-        raise NotImplementedError
+        bdict = json_Serializer.to_dict(blueprint.mapping)
+
+        try: 
+            indent = kwargs.pop('indent')
+        except KeyError:
+            indent = 4
+
+        try:
+            sort_keys = kwargs.pop('sort_keys')
+        except KeyError:
+            sort_keys = True
+
+        with open(filepath, 'w') as f:
+            json.dump(bdict, f, sort_keys=sort_keys, indent=indent, **kwargs)
 
     @staticmethod
     def deserialize(filepath: Path | str, **kwargs) -> Blueprint:
-        raise NotImplementedError
+
+        with open(filepath, 'r') as f:
+            bdict = json.load(f)
+
+        node = json_Serializer.from_dict(bdict)
+        return Blueprint(node)
 
 class yaml_Serializer(BaseSerializer):
 

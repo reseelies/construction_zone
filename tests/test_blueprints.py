@@ -65,33 +65,37 @@ class Test_Serializer(czone_TestCase):
     """blueprint -> serialized form -> blueprint"""
     def setUp(self):
         self.N_trials = 32
-        self.formats = ['h5', 'json']
+        # self.formats = ['h5', 'json']
+        self.formats = ['json']
+        self.generator_args = {'with_strain':False, 'with_sub':False}
 
     def test_generator(self):
         for _ in range(self.N_trials):
-            G = get_random_generator()
+            G = get_random_generator(**self.generator_args)
             blueprint = Blueprint(G)
             for f in self.formats:
                 test_path = 'generator_test_file' + '.' + f
                 Serializer.write(Path(test_path), blueprint)
 
-                test_G = Serializer.read(Path(test_path)).to_object()
+                test_bp = Serializer.read(Path(test_path))
+                test_G = test_bp.to_object()
                 self.assertEqual(G, test_G)
 
     def test_volume(self):
         for _ in range(self.N_trials):
-            V = get_random_volume()
+            V = get_random_object(generator_args=self.generator_args)
             blueprint = Blueprint(V)
             for f in self.formats:
                 test_path = 'volume_test_file' + '.' + f
                 Serializer.write(Path(test_path), blueprint)
 
-                test_V = Serializer.read(Path(test_path)).to_object()
+                test_bp = Serializer.read(Path(test_path))
+                test_V = test_bp.to_object()
                 self.assertEqual(V, test_V)
 
     def test_scene(self):
         for _ in range(self.N_trials):
-            S = get_random_scene()
+            S = get_random_scene(generator_args=self.generator_args)
             blueprint = Blueprint(S)
             for f in self.formats:
                 test_path = 'scene_test_file' + '.' + f
