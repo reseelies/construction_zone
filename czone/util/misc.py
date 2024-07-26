@@ -1,12 +1,11 @@
-from typing import List, Union
+from typing import List
 
 import numpy as np
-from numpy.typing import ArrayLike
-from pymatgen.core import Element
+
 
 def round_away(x: float) -> float:
     """Round to float integer away from zero--opposite of np.fix.
-    
+
     Args:
         x (float, ArrayLike[float]): number(s) to round
 
@@ -16,7 +15,7 @@ def round_away(x: float) -> float:
     return np.sign(x) * np.ceil(np.abs(x))
 
 
-def get_N_splits(n: int, m: int, l: int, rng = None) -> List[int]:
+def get_N_splits(n: int, m: int, l: int, rng=None) -> List[int]:
     """Get N uniform random integers in interval [M,L-M) with separation M.
 
     Args:
@@ -30,19 +29,19 @@ def get_N_splits(n: int, m: int, l: int, rng = None) -> List[int]:
     """
     if n == 0:
         return []
-        
-    if (l - 2 * m < (n - 1) * m):
+
+    if l - 2 * m < (n - 1) * m:
         raise ValueError("m is too large for number of splits requested and l")
 
     rng = np.random.default_rng() if rng is None else rng
-    
+
     # seed an initial choice and create array to calculate distances in
     splits = [rng.integers(m, l - m)]
     data = np.array([x for x in range(m, l - m)])
     idx = np.ma.array(data=data, mask=np.abs(data - splits[-1]) < m)
 
-    while (len(splits) < n):
-        while (np.all(idx.mask)):
+    while len(splits) < n:
+        while np.all(idx.mask):
             # no options left, reseed
             splits = [rng.integers(m, l - m)]
             idx.mask = np.abs(idx.data - splits[-1]) < m

@@ -1,4 +1,5 @@
 import unittest
+
 import numpy as np
 from czone_test_fixtures import czone_TestCase
 
@@ -7,18 +8,17 @@ from czone.util.eset import EqualSet, array_set_equal
 seed = 9817924
 rng = np.random.default_rng(seed=seed)
 
-class Test_EqualSet(czone_TestCase):
 
+class Test_EqualSet(czone_TestCase):
     def setUp(self):
         self.N_trials = 64
         self.N_points = 256
 
     def assertSetEquivalent(self, first, second, msg=None) -> None:
-        "Fail if two sets are not equal, checking "
+        "Fail if two sets are not equal, checking"
         self.assertEqual(len(first), len(second), msg)
         self.assertEqual(first.union(second), first, msg)
         self.assertEqual(first.symmetric_difference(second), set([]), msg)
-
 
     def test_init(self):
         for _ in range(self.N_trials):
@@ -43,7 +43,6 @@ class Test_EqualSet(czone_TestCase):
             self.assertSetEquivalent(sx_ref, sx_itest)
             self.assertSetEquivalent(sx_ref, EqualSet(x) | [j for j in y])
 
-
     def test_difference(self):
         for _ in range(self.N_trials):
             x = rng.integers(0, 100, size=(self.N_points))
@@ -65,7 +64,7 @@ class Test_EqualSet(czone_TestCase):
 
             sx_ref = set([i for i in x]).symmetric_difference([j for j in y])
             sx_test = EqualSet(x).symmetric_difference([j for j in y])
-            
+
             self.assertSetEquivalent(sx_ref, sx_test)
             self.assertSetEquivalent(sx_ref, EqualSet(x) ^ [j for j in y])
 
@@ -88,7 +87,7 @@ class Test_EqualSet(czone_TestCase):
             ref_A = set([i for i in x])
             ref_B = set([j for j in y])
             ref_A.difference_update(ref_B)
-        
+
             true_check = EqualSet(list(ref_A)).isdisjoint(list(ref_B))
             self.assertTrue(ref_A.isdisjoint(ref_B))
             self.assertTrue(true_check)
@@ -99,7 +98,6 @@ class Test_EqualSet(czone_TestCase):
             self.assertFalse(false_check)
 
     def test_equalities(self):
-
         ## Make sure empty sets are handled correctly
         self.assertTrue(EqualSet() == EqualSet())
         self.assertTrue(EqualSet() < EqualSet([1]))
@@ -131,19 +129,16 @@ class Test_EqualSet(czone_TestCase):
             self.assertTrue(sy_test < (sx_test | sy_test))
 
 
-
 class Test_ArraySet(czone_TestCase):
     def setUp(self):
         self.N_trials = 1024
         self.N_points = 1024
 
     def test_array_set_equal(self):
-
         for _ in range(self.N_trials):
-
             X = rng.uniform(size=(self.N_points, 3))
             Xp = rng.permutation(X, axis=0)
             self.assertTrue(array_set_equal(X, Xp))
 
-            Xp[23, :] = rng.uniform(size=(1,3)) + 1.0
+            Xp[23, :] = rng.uniform(size=(1, 3)) + 1.0
             self.assertFalse(array_set_equal(X, Xp))

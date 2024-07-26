@@ -1,17 +1,27 @@
-from dataclasses import dataclass, field
-
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
+from dataclasses import dataclass, field
 
-from czone.util.eset import EqualSet
-from czone.volume import BaseVolume, BaseAlgebraic, Volume, MultiVolume, Voxel, Plane, Sphere, Cylinder
-from czone.scene import BaseScene, Scene, PeriodicScene
-from czone.generator import BaseGenerator, AmorphousGenerator, Generator, NullGenerator
-from czone.molecule import Molecule
-from czone.transform import BaseStrain, BasePostTransform
-
-from pymatgen.core import Structure, Lattice
 import numpy as np
+from pymatgen.core import Lattice, Structure
+
+from czone.generator.generator import AmorphousGenerator, BaseGenerator, Generator, NullGenerator
+from czone.scene.scene import BaseScene, PeriodicScene, Scene
+from czone.transform.post import BasePostTransform
+from czone.transform.strain import BaseStrain
+from czone.volume.algebraic import (
+    BaseAlgebraic,
+    Cylinder,
+    Plane,
+    Sphere,
+)
+from czone.volume.volume import (
+    BaseVolume,
+    MultiVolume,
+    Volume,
+)
+from czone.volume.voxel import Voxel
+
 
 @dataclass(kw_only=True)
 class BaseNode(ABC, Mapping):
@@ -22,10 +32,8 @@ class BaseNode(ABC, Mapping):
     def __post_init__(self):
         for name, field_type in self.__annotations__.items():
             if field_type == np.ndarray:
-                setattr(self, 
-                        name,
-                        np.array(getattr(self, name)))
-        
+                setattr(self, name, np.array(getattr(self, name)))
+
     @property
     @abstractmethod
     def is_leaf(self) -> bool:
@@ -47,19 +55,19 @@ class BaseNode(ABC, Mapping):
 
     def __getitem__(self, key):
         return self.__dict__[key]
-    
+
     def __len__(self):
         return len(self.__dict__)
-    
+
     def __iter__(self):
         yield from self.__dict__
-    
-class BaseGeneratorNode(BaseNode):
 
+
+class BaseGeneratorNode(BaseNode):
     @property
     def base_type(self):
         return BaseGenerator
-    
+
     @property
     def class_type(self):
         return BaseGenerator
@@ -67,14 +75,16 @@ class BaseGeneratorNode(BaseNode):
     @property
     def is_leaf(self):
         return True
-    
+
     def add_node(self, node):
         pass
+
 
 class NullGeneratorNode(BaseGeneratorNode):
     @property
     def class_type(self):
         return NullGenerator
+
 
 @dataclass
 class AmorphousGeneratorNode(BaseGeneratorNode):
@@ -86,19 +96,21 @@ class AmorphousGeneratorNode(BaseGeneratorNode):
     @property
     def class_type(self):
         return AmorphousGenerator
-    
+
+
 @dataclass
 class GeneratorNode(BaseGeneratorNode):
     origin: np.ndarray
     lattice_matrix: np.ndarray
     basis_species: tuple[int]
     basis_coords: np.ndarray
-    strain_field: BaseStrain | None = None # TODO: move to children?
+    strain_field: BaseStrain | None = None  # TODO: move to children?
     post_transform: BasePostTransform | None = None
 
     @property
     def class_type(self):
         return Generator
+
 
 @dataclass
 class BaseAlgebraicNode(BaseNode):
@@ -107,13 +119,14 @@ class BaseAlgebraicNode(BaseNode):
     @property
     def is_leaf(self):
         return True
-    
+
     def add_node(self, node):
         pass
 
     @property
     def base_type(self):
         return BaseAlgebraic
+
 
 @dataclass
 class SphereNode(BaseAlgebraicNode):
@@ -124,6 +137,7 @@ class SphereNode(BaseAlgebraicNode):
     def class_type(self):
         return Sphere
 
+
 @dataclass
 class PlaneNode(BaseAlgebraicNode):
     normal: np.ndarray
@@ -132,6 +146,7 @@ class PlaneNode(BaseAlgebraicNode):
     @property
     def class_type(self):
         return Plane
+
 
 @dataclass
 class CylinderNode(BaseAlgebraicNode):
@@ -144,6 +159,7 @@ class CylinderNode(BaseAlgebraicNode):
     def class_type(self):
         return Cylinder
 
+
 @dataclass
 class VoxelNode(BaseNode):
     bases: np.ndarray
@@ -153,17 +169,18 @@ class VoxelNode(BaseNode):
     @property
     def base_type(self):
         return Voxel
-    
+
     @property
     def class_type(self):
         return Voxel
-    
+
     @property
     def is_leaf(self):
         return True
-    
+
     def add_node(self, node):
         pass
+
 
 @dataclass
 class BaseVolumeNode(BaseNode):
@@ -172,16 +189,17 @@ class BaseVolumeNode(BaseNode):
     @property
     def base_type(self):
         return BaseVolume
-    
+
     @property
     def is_leaf(self):
         return False
 
-@dataclass    
+
+@dataclass
 class VolumeNode(BaseVolumeNode):
     tolerance: float
     points: np.ndarray
-    
+
     def add_node(self, node):
         match node:
             case BaseGeneratorNode():
@@ -206,28 +224,31 @@ class VolumeNode(BaseVolumeNode):
     def class_type(self):
         return Volume
 
+
 class MultiVolumeNode(BaseVolumeNode):
     def add_node(self, node):
         match node:
             case VolumeNode() | MultiVolumeNode():
                 self.children.append(node)
             case _:
-                raise TypeError("MultiVolumeNodes can only be parent to other MultiVolumes or Volumes")
+                raise TypeError(
+                    "MultiVolumeNodes can only be parent to other MultiVolumes or Volumes"
+                )
 
     @property
     def class_type(self):
         return MultiVolume
 
-class BaseSceneNode(BaseNode):
 
+class BaseSceneNode(BaseNode):
     @property
     def base_type(self):
         return BaseScene
-    
+
     @property
     def is_leaf(self):
         return False
-    
+
     def add_node(self, node):
         match node:
             case VoxelNode():
@@ -247,12 +268,13 @@ class BaseSceneNode(BaseNode):
             case _:
                 raise TypeError
 
-class SceneNode(BaseSceneNode):
 
+class SceneNode(BaseSceneNode):
     @property
     def class_type(self):
         return Scene
-    
+
+
 @dataclass
 class PeriodicSceneNode(BaseSceneNode):
     pbc: tuple[bool]
@@ -269,31 +291,33 @@ class PeriodicSceneNode(BaseSceneNode):
 
 ## Used in Serializers
 BaseNodeMap = {
-    'NullGenerator':NullGeneratorNode,
-    'AmorphousGenerator':AmorphousGeneratorNode,
-    'Generator':GeneratorNode,
-    'Sphere':SphereNode,
-    'Plane':PlaneNode,
-    'Cylinder':CylinderNode,
-    'Voxel':VoxelNode,
-    'Volume':VolumeNode,
-    'MultiVolume':MultiVolumeNode,
-    'Scene':SceneNode,
-    'PeriodicScene':PeriodicSceneNode
+    "NullGenerator": NullGeneratorNode,
+    "AmorphousGenerator": AmorphousGeneratorNode,
+    "Generator": GeneratorNode,
+    "Sphere": SphereNode,
+    "Plane": PlaneNode,
+    "Cylinder": CylinderNode,
+    "Voxel": VoxelNode,
+    "Volume": VolumeNode,
+    "MultiVolume": MultiVolumeNode,
+    "Scene": SceneNode,
+    "PeriodicScene": PeriodicSceneNode,
 }
 
 ## Let class types be serialized as lowercase and uppercase
-NodeMap = {**BaseNodeMap,
-**{k.lower():v for k, v in BaseNodeMap.items()},
-**{k.upper():v for k, v in BaseNodeMap.items()},
+NodeMap = {
+    **BaseNodeMap,
+    **{k.lower(): v for k, v in BaseNodeMap.items()},
+    **{k.upper(): v for k, v in BaseNodeMap.items()},
 }
 
 
-class Blueprint():
+class Blueprint:
     """
-    Represents (Periodic)Scenes, (Multi)Volumes, and Generators 
+    Represents (Periodic)Scenes, (Multi)Volumes, and Generators
     as nested mappings.
     """
+
     def __init__(self, obj):
         self.get_mapping(obj)
 
@@ -311,14 +335,14 @@ class Blueprint():
     @property
     def mapping(self):
         return self._mapping
-    
+
     @mapping.setter
     def mapping(self, node):
         if isinstance(node, BaseNode):
             self._mapping = node
         else:
             raise TypeError
-        
+
     ####################
     # Forward mappings #
     ####################
@@ -333,30 +357,34 @@ class Blueprint():
     def forward_map(obj) -> BaseNode:
         match obj:
             case BaseGenerator():
-               return Blueprint.map_generator(obj)
+                return Blueprint.map_generator(obj)
             case BaseVolume():
-               return Blueprint.map_volume(obj)
+                return Blueprint.map_volume(obj)
             case BaseScene():
-               return Blueprint.map_scene(obj)
+                return Blueprint.map_scene(obj)
             case Voxel():
                 return Blueprint.map_voxel(obj)
             case _:
                 raise TypeError
 
     @staticmethod
-    def map_generator(G: BaseGenerator) -> NullGeneratorNode | AmorphousGeneratorNode | GeneratorNode:
+    def map_generator(
+        G: BaseGenerator,
+    ) -> NullGeneratorNode | AmorphousGeneratorNode | GeneratorNode:
         match G:
             case NullGenerator():
                 return NullGeneratorNode()
             case AmorphousGenerator():
                 return AmorphousGeneratorNode(G.origin, G.min_dist, G.density, G.species)
             case Generator():
-                params = {'origin':G.origin,
-                          'lattice_matrix':G.lattice.matrix,
-                          'basis_species':G.species,
-                          'basis_coords':G.coords,
-                          'strain_field':G.strain_field,
-                          'post_transform':G.post_transform}
+                params = {
+                    "origin": G.origin,
+                    "lattice_matrix": G.lattice.matrix,
+                    "basis_species": G.species,
+                    "basis_coords": G.coords,
+                    "strain_field": G.strain_field,
+                    "post_transform": G.post_transform,
+                }
                 return GeneratorNode(**params)
             case _:
                 raise TypeError
@@ -369,10 +397,12 @@ class Blueprint():
             case Plane():
                 return PlaneNode(tol=A.tol, point=A.point, normal=A.normal)
             case Cylinder():
-                return CylinderNode(tol=A.tol, radius=A.radius, length=A.length, axis=A.axis, point=A.point)
+                return CylinderNode(
+                    tol=A.tol, radius=A.radius, length=A.length, axis=A.axis, point=A.point
+                )
             case _:
                 raise TypeError
-            
+
     @staticmethod
     def map_volume(V: BaseVolume) -> VolumeNode | MultiVolumeNode:
         # Should be recursive, to handle multivolumes
@@ -407,20 +437,20 @@ class Blueprint():
                 node = PeriodicSceneNode(pbc=S.pbc)
             case _:
                 raise TypeError
-            
+
         node.add_node(Blueprint.map_voxel(S.domain))
         for o in S.objects:
             node.add_node(Blueprint.map_volume(o))
 
         return node
-    
+
     ####################
     # Inverse mappings #
     ####################
-    
+
     def to_object(self):
         return self.inverse_map(self.mapping)
-    
+
     @staticmethod
     def inverse_map(node: BaseNode):
         match node:
@@ -438,19 +468,21 @@ class Blueprint():
                 raise TypeError
 
     @staticmethod
-    def inverse_map_generator(node: BaseGeneratorNode) -> NullGenerator | Generator | AmorphousGenerator:
+    def inverse_map_generator(
+        node: BaseGeneratorNode,
+    ) -> NullGenerator | Generator | AmorphousGenerator:
         params = {**node}
-        children = params.pop('children')
+        children = params.pop("children")
         if len(children) != 0:
             raise ValueError("BaseGeneratorNodes should not have children.")
-        
+
         match node:
             case NullGeneratorNode() | AmorphousGeneratorNode():
                 return node.class_type(**params)
             case GeneratorNode():
-                lattice = Lattice(params.pop('lattice_matrix'))
-                species = params.pop('basis_species')
-                coords = params.pop('basis_coords')
+                lattice = Lattice(params.pop("lattice_matrix"))
+                species = params.pop("basis_species")
+                coords = params.pop("basis_coords")
                 structure = Structure(lattice, species, coords)
                 return Generator(structure=structure, **params)
             case BaseGeneratorNode():
@@ -461,40 +493,40 @@ class Blueprint():
     @staticmethod
     def inverse_map_algebraic(node: BaseAlgebraicNode) -> Sphere | Plane | Cylinder:
         params = {**node}
-        children = params.pop('children')
+        children = params.pop("children")
         if len(children) != 0:
             raise ValueError("BaseAlgebraicNodes should not have children.")
-        
+
         return node.class_type(**params)
-    
+
     @staticmethod
     def inverse_map_volume(node: BaseVolumeNode) -> Volume | MultiVolume:
         params = {**node}
-        children = params.pop('children')
+        children = params.pop("children")
         match node:
             case MultiVolumeNode():
                 volumes = [Blueprint.inverse_map_volume(c) for c in children]
                 return MultiVolume(volumes, **params)
             case VolumeNode():
-                params['alg_objects'] = []
+                params["alg_objects"] = []
                 for c in children:
                     if isinstance(c, BaseAlgebraicNode):
-                        params['alg_objects'].append(Blueprint.inverse_map_algebraic(c))
+                        params["alg_objects"].append(Blueprint.inverse_map_algebraic(c))
                     else:
-                        params['generator'] = Blueprint.inverse_map_generator(c)
+                        params["generator"] = Blueprint.inverse_map_generator(c)
                 return Volume(**params)
             case BaseVolumeNode():
                 raise TypeError("Base Volumes should not be constructed directly")
             case _:
                 raise TypeError
-            
+
     @staticmethod
     def inverse_map_voxel(node: VoxelNode) -> Voxel:
         params = {**node}
-        children = params.pop('children')
+        children = params.pop("children")
         if len(children) != 0:
             raise ValueError("VoxelNodes should not have children.")
-        
+
         return Voxel(**params)
 
     @staticmethod
@@ -503,17 +535,17 @@ class Blueprint():
             raise TypeError
 
         params = {**node}
-        children = params.pop('children')
+        children = params.pop("children")
 
-        params['objects'] = []
+        params["objects"] = []
 
         for c in children:
             match c:
                 case VoxelNode():
-                    params['domain'] = Blueprint.inverse_map_voxel(c)
+                    params["domain"] = Blueprint.inverse_map_voxel(c)
                 case BaseVolumeNode():
-                    params['objects'].append(Blueprint.inverse_map_volume(c))
+                    params["objects"].append(Blueprint.inverse_map_volume(c))
                 case _:
                     raise TypeError
-                
+
         return node.class_type(**params)

@@ -1,23 +1,19 @@
-from collections.abc import Callable
-from typing import List, Tuple
+from typing import Tuple
 
 import numpy as np
 
 
-def get_voxel_grid(dim: Tuple[int],
-                   px: bool = True,
-                   py: bool = True,
-                   pz: bool = True):
+def get_voxel_grid(dim: Tuple[int], px: bool = True, py: bool = True, pz: bool = True):
     """Generate list of voxel neighbors for 3D voxel grid with periodic boundary conditions.
 
     Utility function which returns a representation of a connected 3D voxel grid
     for arbitrary periodic boundary conditions. Voxels are ordered on a 1D list
     by X, then Y, then Z. For example, a 2x2x2 voxel grid will be ordered as
     [(0,0,0), (1,0,0), (0,1,0), (1,1,0), (0,0,1), (1,0,1), (0,1,1), (1,1,1)]. An ordered
-    list is returned which contains, for each voxel i, a list of all of its 
+    list is returned which contains, for each voxel i, a list of all of its
     neighbors on the 3D grid, as ordered in the 1D indexing scheme.
 
-    For fully periodic boundary conditions, each voxel i will have 27 neighbors, 
+    For fully periodic boundary conditions, each voxel i will have 27 neighbors,
     including the voxel index itself.
 
     Args:
@@ -40,28 +36,28 @@ def get_voxel_grid(dim: Tuple[int],
     # get relative indices as 1D list
     shifts = (1, dim[0], dim[0] * dim[1])
     for i, t in enumerate(zip(nn_x, nn_y, nn_z)):
-        neighbors[:, i] += np.dot(t, shifts) 
+        neighbors[:, i] += np.dot(t, shifts)
 
     ind = np.arange(N)
     # correct x_min edge
     le = (ind % dim[0]) == 0
-    for j in range(0,27,3): # nn_x == -1
+    for j in range(0, 27, 3):  # nn_x == -1
         neighbors[le, j] += dim[0]
 
     # correct x max edge
     re = (ind % dim[0]) == (dim[0] - 1)
-    for j in range(2, 27,3): # nn_x == 1
+    for j in range(2, 27, 3):  # nn_x == 1
         neighbors[re, j] -= dim[0]
 
     # correct y min edge
     te = ((ind // dim[0]) % dim[1]) == 0
     for j in np.where(nn_y == -1)[0]:
-        neighbors[te, j] += dim[0]*dim[1]
+        neighbors[te, j] += dim[0] * dim[1]
 
     # correct y max edge
-    be = ((ind // dim[0]) % dim[1]) == (dim[1]-1)
+    be = ((ind // dim[0]) % dim[1]) == (dim[1] - 1)
     for j in np.where(nn_y == 1)[0]:
-        neighbors[be, j] -= dim[0]*dim[1]
+        neighbors[be, j] -= dim[0] * dim[1]
 
     # correct list for total size of grid
     neighbors = neighbors % N
@@ -144,8 +140,7 @@ def get_voxel_grid(dim: Tuple[int],
             for yc, nn_yc in zip([yi_face, yf_face], [nn_yi, nn_yf]):
                 for zc, nn_zc in zip([zi_face, zf_face], [nn_zi, nn_zf]):
                     idx_check = np.logical_and(np.logical_and(yc, zc), xc)
-                    nn_check = np.logical_and(np.logical_and(nn_yc, nn_zc),
-                                              nn_xc)
+                    nn_check = np.logical_and(np.logical_and(nn_yc, nn_zc), nn_xc)
                     neighbors[idx_check @ nn_check] = np.nan
 
     # used masked arrays to get compact lists of neighboring voxels
@@ -154,6 +149,7 @@ def get_voxel_grid(dim: Tuple[int],
     neighbor_lists = [set(list(np.ma.compressed(x))) for x in neighbors_ma]
 
     return neighbor_lists
+
 
 def get_sdist_fun(dims=None, px=False, py=False, pz=False):
     """Return a squared distance function in 3D space for any PBC.
@@ -168,13 +164,13 @@ def get_sdist_fun(dims=None, px=False, py=False, pz=False):
 
     Returns:
         Callable[float] : squared distance function obeying periodic boundaries
-        
+
     """
     # return standard distance function if no periodic bonadries
     if not np.any((px, py, pz)):
 
         def sdist(A, B):
-            return np.sum((A - B)**2.0, axis=1)
+            return np.sum((A - B) ** 2.0, axis=1)
 
     # grab relevant dimensions
     cols = [x for x, y in zip([0, 1, 2], [px, py, pz]) if y]
@@ -184,9 +180,7 @@ def get_sdist_fun(dims=None, px=False, py=False, pz=False):
     def sdist(A, B):
         dist_0 = np.abs(A - B)
         dist_1 = sdims - dist_0[:, cols, :]
-        dist_0[:, cols, :] = np.min(np.stack([dist_0[:, cols, :], dist_1],
-                                             axis=-1),
-                                    axis=-1)
+        dist_0[:, cols, :] = np.min(np.stack([dist_0[:, cols, :], dist_1], axis=-1), axis=-1)
 
         return np.sum(dist_0 * dist_0, axis=1)
 
@@ -242,9 +236,7 @@ def calc_rdf(coords, cutoff=20.0, px=True, py=True, pz=True):
             dist = np.sqrt(f_sdist(cur_parts, neighbor_parts))
 
             # use histogram to get counts for RDF
-            tmp_counts, _ = np.histogram(dist,
-                                         bins=counts.shape[0],
-                                         range=(0.0, cutoff))
+            tmp_counts, _ = np.histogram(dist, bins=counts.shape[0], range=(0.0, cutoff))
             counts += tmp_counts
 
     # correct for self interactions

@@ -1,5 +1,6 @@
 import copy
 from abc import ABC, abstractmethod
+from functools import reduce
 from typing import List
 
 import numpy as np
@@ -7,14 +8,11 @@ from ase import Atoms
 from ase.io import write as ase_write
 from scipy.spatial import ConvexHull, Delaunay
 
-from ..generator import AmorphousGenerator, BaseGenerator
-from ..transform import BaseTransform
-from .algebraic import BaseAlgebraic, Plane, Sphere, Cylinder
-from .algebraic import get_bounding_box as get_bounding_box_planes
-
-from functools import reduce
-
+from czone.generator.generator import AmorphousGenerator, BaseGenerator
+from czone.transform.transform import BaseTransform
 from czone.util.eset import EqualSet, array_set_equal
+from czone.volume.algebraic import BaseAlgebraic, Cylinder, Plane, Sphere
+from czone.volume.algebraic import get_bounding_box as get_bounding_box_planes
 
 ############################
 ###### Volume Classes ######
@@ -172,15 +170,15 @@ class Volume(BaseVolume):
             self.add_alg_object(alg_objects)
 
     def __repr__(self):
+        args = (
+            f"points={repr(self.points)}, ",
+            f"alg_objects={repr(self.alg_objects)}, ",
+            f"generator={repr(self.generator)}, ",
+            f"priority={repr(self.priority)}, ",
+            f"tolerance={repr(self.tolerance)}",
+        )
 
-        args = (f"points={repr(self.points)}, ",
-                f"alg_objects={repr(self.alg_objects)}, ",
-                f"generator={repr(self.generator)}, ",
-                f"priority={repr(self.priority)}, ",
-                f"tolerance={repr(self.tolerance)}")
-        
         return f"Volume({reduce(lambda x, y: x+y, args)})"
-
 
     def __eq__(self, other):
         # TODO: For now, this only checks set equivalance of the properties
@@ -192,12 +190,16 @@ class Volume(BaseVolume):
             # TODO: check against the convex hull instead
             ## use hard ands instead of reduce over properties to short circuit
 
-            points_check = (self.points is None and other.points is None) or array_set_equal(self.points, other.points)
-            check = self.generator == other.generator and \
-                    points_check and \
-                    EqualSet(self.alg_objects) == (EqualSet(other.alg_objects)) and \
-                    self.priority == other.priority and \
-                    np.isclose(self.tolerance, other.tolerance)
+            points_check = (self.points is None and other.points is None) or array_set_equal(
+                self.points, other.points
+            )
+            check = (
+                self.generator == other.generator
+                and points_check
+                and EqualSet(self.alg_objects) == (EqualSet(other.alg_objects))
+                and self.priority == other.priority
+                and np.isclose(self.tolerance, other.tolerance)
+            )
 
             return check
         else:
@@ -241,7 +243,7 @@ class Volume(BaseVolume):
             if not isinstance(ob, BaseAlgebraic):
                 raise TypeError("Must be adding algebraic objects from derived BaseAlgebraic class")
             ob_copies.append(copy.deepcopy(ob))
-            
+
         self._alg_objects.extend(ob_copies)
 
     @property
@@ -450,12 +452,14 @@ class MultiVolume(BaseVolume):
             self.priority = priority
 
     def __repr__(self):
-        volume_substr = reduce(lambda x, y: x+y, [f'{repr(v)}, ' for v in self.volumes])
-        return f'MultiVolume(volumes=[{volume_substr}], priority={repr(self.priority)})'
-    
+        volume_substr = reduce(lambda x, y: x + y, [f"{repr(v)}, " for v in self.volumes])
+        return f"MultiVolume(volumes=[{volume_substr}], priority={repr(self.priority)})"
+
     def __eq__(self, other):
         if isinstance(other, MultiVolume):
-            return self.priority == other.priority and (EqualSet(self.volumes) == EqualSet(other.volumes))
+            return self.priority == other.priority and (
+                EqualSet(self.volumes) == EqualSet(other.volumes)
+            )
         else:
             return False
 
@@ -538,19 +542,13 @@ class MultiVolume(BaseVolume):
 
             for j in range(eidx):
                 if i != j:
-                    check_against = np.logical_not(
-                        self.volumes[j].checkIfInterior(vol.atoms)
-                    )
+                    check_against = np.logical_not(self.volumes[j].checkIfInterior(vol.atoms))
                     check = np.logical_and(check, check_against)
 
             checks.append(check)
 
-        self._atoms = np.vstack(
-            [vol.atoms[checks[i], :] for i, vol in enumerate(self.volumes)]
-        )
-        self._species = np.hstack(
-            [vol.species[checks[i]] for i, vol in enumerate(self.volumes)]
-        )
+        self._atoms = np.vstack([vol.atoms[checks[i], :] for i, vol in enumerate(self.volumes)])
+        self._species = np.hstack([vol.species[checks[i]] for i, vol in enumerate(self.volumes)])
 
     def get_bounding_box(self):
         """Return union of bounding boxes. TODO: Update to convex hull"""

@@ -1,11 +1,9 @@
-import copy
 from abc import ABC, abstractmethod
 
 import numpy as np
-from scipy.spatial.transform import \
-    Rotation as scRotation  # avoid namespace conflicts
+from scipy.spatial.transform import Rotation as scRotation  # avoid namespace conflicts
 
-from ..volume.algebraic import BaseAlgebraic, Plane, Sphere, Cylinder
+from czone.volume.algebraic import BaseAlgebraic, Cylinder, Plane, Sphere
 
 #####################################
 ########### Base Classes ############
@@ -15,9 +13,9 @@ from ..volume.algebraic import BaseAlgebraic, Plane, Sphere, Cylinder
 class BaseTransform(ABC):
     """Base class for transformation objects which manipulate Generators and Volumes.
 
-    Transformation objects contain logic and parameters for manipulating the 
+    Transformation objects contain logic and parameters for manipulating the
     different types of objects used in Construction Zone, namely, Generators and
-    Volumes. BaseTransform is typically not created directly. Use MatrixTransform for 
+    Volumes. BaseTransform is typically not created directly. Use MatrixTransform for
     generalized matrix transformations.
 
     Attributes:
@@ -34,7 +32,7 @@ class BaseTransform(ABC):
     @abstractmethod
     def applyTransformation(self, points: np.ndarray) -> np.ndarray:
         """Apply transformation to a collection of points in space.
-     
+
         Args:
             points (np.ndarray): Nx3 array of points to transform.
 
@@ -56,8 +54,7 @@ class BaseTransform(ABC):
         pass
 
     @abstractmethod
-    def applyTransformation_alg(self,
-                                alg_object: BaseAlgebraic) -> BaseAlgebraic:
+    def applyTransformation_alg(self, alg_object: BaseAlgebraic) -> BaseAlgebraic:
         """Apply transformation to algebraic object.
 
         Args:
@@ -71,7 +68,7 @@ class BaseTransform(ABC):
     @property
     @abstractmethod
     def params(self) -> tuple:
-        """Return parameters describing transformation. """
+        """Return parameters describing transformation."""
         pass
 
     @property
@@ -81,8 +78,7 @@ class BaseTransform(ABC):
 
     @locked.setter
     def locked(self, locked):
-        assert (isinstance(locked,
-                           bool)), "Must supply bool to locked parameter."
+        assert isinstance(locked, bool), "Must supply bool to locked parameter."
         self._locked = locked
 
     @property
@@ -92,8 +88,7 @@ class BaseTransform(ABC):
 
     @basis_only.setter
     def basis_only(self, basis_only):
-        assert (isinstance(basis_only,
-                           bool)), "Must supply bool to basis_only parameter"
+        assert isinstance(basis_only, bool), "Must supply bool to basis_only parameter"
         self._basis_only = basis_only
 
 
@@ -104,10 +99,7 @@ class Translation(BaseTransform):
         shift (np.ndarray): Translation vector in 3D space.
     """
 
-    def __init__(self,
-                 shift=None,
-                 locked: bool = True,
-                 basis_only: bool = False):
+    def __init__(self, shift=None, locked: bool = True, basis_only: bool = False):
         self._shift = None
         self._locked = None
 
@@ -118,7 +110,9 @@ class Translation(BaseTransform):
         self.basis_only = basis_only
 
     def __repr__(self) -> str:
-        return f"Translation(shift={self.shift}, locked={self.locked}, basis_only={self.basis_only})"
+        return (
+            f"Translation(shift={self.shift}, locked={self.locked}, basis_only={self.basis_only})"
+        )
 
     @property
     def shift(self):
@@ -158,15 +152,11 @@ class MatrixTransform(BaseTransform):
 
     Attributes:
         matrix (np.ndarray): 3x3 matrix representing transformation
-        origin (np.ndarray): point in R3 representing relative origin in which 
+        origin (np.ndarray): point in R3 representing relative origin in which
                              transformation is applied
     """
 
-    def __init__(self,
-                 matrix=None,
-                 origin=None,
-                 locked: bool = True,
-                 basis_only: bool = False):
+    def __init__(self, matrix=None, origin=None, locked: bool = True, basis_only: bool = False):
         self._matrix = None
         self._origin = None
 
@@ -180,13 +170,12 @@ class MatrixTransform(BaseTransform):
 
     @property
     def matrix(self) -> np.ndarray:
-        """3x3 array representing matrix transformation """
+        """3x3 array representing matrix transformation"""
         return self._matrix
 
     @matrix.setter
     def matrix(self, matrix: np.ndarray):
-        assert (matrix.shape == (
-            3, 3)), "Input matrix must be square 3x3 numpy array"
+        assert matrix.shape == (3, 3), "Input matrix must be square 3x3 numpy array"
         self._matrix = matrix
 
     @property
@@ -197,8 +186,8 @@ class MatrixTransform(BaseTransform):
     @origin.setter
     def origin(self, origin):
         origin = np.array(origin).reshape((3,))
-        assert (origin.size == 3), "Origin must be a point in 3D space"
-        assert (origin.shape[0] == 3), "Origin must be a point in 3D space"
+        assert origin.size == 3, "Origin must be a point in 3D space"
+        assert origin.shape[0] == 3, "Origin must be a point in 3D space"
         self._origin = origin
 
     @property
@@ -207,8 +196,7 @@ class MatrixTransform(BaseTransform):
 
     def applyTransformation(self, points):
         if not (self.origin is None):
-            points = np.dot(self.matrix,
-                            (points - self.origin).T).T + self.origin
+            points = np.dot(self.matrix, (points - self.origin).T).T + self.origin
         else:
             points = np.dot(self.matrix, (points).T).T
 
@@ -221,17 +209,17 @@ class MatrixTransform(BaseTransform):
         # TODO: swtich to match/case
         if isinstance(alg_object, Sphere):
             if not (self.origin is None):
-                alg_object.center = np.dot(
-                    self.matrix,
-                    (alg_object.center - self.origin).T).T + self.origin
+                alg_object.center = (
+                    np.dot(self.matrix, (alg_object.center - self.origin).T).T + self.origin
+                )
             else:
                 alg_object.center = np.dot(self.matrix, (alg_object.center).T).T
 
         if isinstance(alg_object, Plane):
             if not (self.origin is None):
-                alg_object.point = np.dot(
-                    self.matrix,
-                    (alg_object.point - self.origin).T).T + self.origin
+                alg_object.point = (
+                    np.dot(self.matrix, (alg_object.point - self.origin).T).T + self.origin
+                )
             else:
                 alg_object.point = np.dot(self.matrix, (alg_object.point).T).T
 
@@ -239,9 +227,9 @@ class MatrixTransform(BaseTransform):
 
         if isinstance(alg_object, Cylinder):
             if not (self.origin is None):
-                alg_object.point = np.dot(
-                    self.matrix,
-                    (alg_object.point - self.origin).T).T + self.origin
+                alg_object.point = (
+                    np.dot(self.matrix, (alg_object.point - self.origin).T).T + self.origin
+                )
             else:
                 alg_object.point = np.dot(self.matrix, (alg_object.point).T).T
 
@@ -251,20 +239,15 @@ class MatrixTransform(BaseTransform):
 
 
 class Inversion(MatrixTransform):
-    """ Transformation which applies inversion about an origin.
+    """Transformation which applies inversion about an origin.
 
     Inversion, Rotation, and Reflection classes are derived classes of MatrixTransform
     that have special setters which ensure validity of their respective transformations.
     """
 
-    def __init__(self,
-                 origin=None,
-                 locked: bool = True,
-                 basis_only: bool = False):
-        super().__init__(matrix=None,
-                         origin=origin,
-                         locked=locked,
-                         basis_only=basis_only)
+    def __init__(self, origin=None, locked: bool = True, basis_only: bool = False):
+        super().__init__(matrix=None, origin=origin, locked=locked, basis_only=basis_only)
+
     @property
     def matrix(self):
         """Inversion matrix. Cannot be altered."""
@@ -278,22 +261,15 @@ class Rotation(MatrixTransform):
     that have special setters which ensure validity of their respective transformations.
     """
 
-    def __init__(self,
-                 matrix=None,
-                 origin=None,
-                 locked: bool = True,
-                 basis_only: bool = False):
-        super().__init__(matrix=matrix,
-                         origin=origin,
-                         locked=locked,
-                         basis_only=basis_only)
+    def __init__(self, matrix=None, origin=None, locked: bool = True, basis_only: bool = False):
+        super().__init__(matrix=matrix, origin=origin, locked=locked, basis_only=basis_only)
 
     @MatrixTransform.matrix.setter
     def matrix(self, val):
-        assert (val.shape == (3,
-                              3)), "Input matrix must be square 3x3 numpy array"
-        assert (np.abs(np.linalg.det(val) - 1.0) < 1e-6
-               ), "Input matrix not a valid rotation matrix. Fails determinant."
+        assert val.shape == (3, 3), "Input matrix must be square 3x3 numpy array"
+        assert (
+            np.abs(np.linalg.det(val) - 1.0) < 1e-6
+        ), "Input matrix not a valid rotation matrix. Fails determinant."
         assert (
             np.sum(np.abs(val @ val.T - np.eye(3))) < 1e-6
         ), "Input matrix not a valid rotation matrix. Fails orthogonality."
@@ -310,22 +286,15 @@ class Reflection(MatrixTransform):
         plane (Plane): plane about which reflection is performed
     """
 
-    def __init__(self,
-                 plane=None,
-                 locked: bool = True,
-                 basis_only: bool = False):
-        super().__init__(matrix=None,
-                         origin=None,
-                         locked=locked,
-                         basis_only=basis_only)
+    def __init__(self, plane=None, locked: bool = True, basis_only: bool = False):
+        super().__init__(matrix=None, origin=None, locked=locked, basis_only=basis_only)
 
         if not (plane is None):
             self.plane = plane
 
     @MatrixTransform.matrix.setter
     def matrix(self, normal):
-        self._matrix = np.eye(3) - (2.0 /
-                                    (normal.T @ normal)) * (normal @ normal.T)
+        self._matrix = np.eye(3) - (2.0 / (normal.T @ normal)) * (normal @ normal.T)
 
     @property
     def plane(self):
@@ -333,9 +302,7 @@ class Reflection(MatrixTransform):
 
     @plane.setter
     def plane(self, plane):
-        assert (isinstance(
-            plane,
-            Plane)), "Input plane must be Plane object from algebraic module"
+        assert isinstance(plane, Plane), "Input plane must be Plane object from algebraic module"
         self._plane = plane
         self.matrix = plane.normal.reshape(3, 1)
         self.origin = plane.point
@@ -346,13 +313,14 @@ class Reflection(MatrixTransform):
 
     def applyTransformation_alg(self, alg_object):
         if (isinstance(alg_object), Sphere):
-            alg_object.center = np.dot(
-                self.matrix,
-                (alg_object.center - self.origin).T).T + self.origin
+            alg_object.center = (
+                np.dot(self.matrix, (alg_object.center - self.origin).T).T + self.origin
+            )
 
         if (isinstance(alg_object), Plane):
-            alg_object.point = np.dot(
-                self.matrix, (alg_object.point - self.origin).T).T + self.origin
+            alg_object.point = (
+                np.dot(self.matrix, (alg_object.point - self.origin).T).T + self.origin
+            )
 
         return alg_object
 
@@ -363,7 +331,7 @@ class MultiTransform(BaseTransform):
     Attributes:
         transforms (list[BaseTransform]): list of individual transformations applied
         locked (bool): whether any of transformations applied is a joint transformation
-        basic_only (bool): whether any of transformations applied transforms 
+        basic_only (bool): whether any of transformations applied transforms
                            only the generator basis
 
     """
@@ -376,7 +344,7 @@ class MultiTransform(BaseTransform):
 
     @property
     def transforms(self):
-        """ Sequence of individual transformations to apply"""
+        """Sequence of individual transformations to apply"""
         return self._transforms
 
     @property
@@ -406,15 +374,14 @@ class MultiTransform(BaseTransform):
 
     def add_transform(self, transform):
         """Add a transformation to sequence of transformations"""
-        if hasattr(transform, '__iter__'):
+        if hasattr(transform, "__iter__"):
             for t in transform:
-                assert (isinstance(t, BaseTransform)
-                       ), "transforms must be BaseTransformation objects"
+                assert isinstance(t, BaseTransform), "transforms must be BaseTransformation objects"
             self._transforms.extend(transform)
         else:
-            assert (isinstance(
-                transform,
-                BaseTransform)), "transforms must be BaseTransformation objects"
+            assert isinstance(
+                transform, BaseTransform
+            ), "transforms must be BaseTransformation objects"
             self._transforms.append(transform)
 
     def applyTransformation(self, points):
@@ -460,7 +427,7 @@ def rot_vtv(v: np.ndarray, vt: np.ndarray) -> np.ndarray:
     Args:
         v (np.ndarray): 1x3 original vector
         vt (np.ndarray): 1x3 target vector into which v is rotated
-    
+
     Returns:
         np.ndarray: 3x3 rotation matrix
     """
@@ -472,22 +439,30 @@ def rot_vtv(v: np.ndarray, vt: np.ndarray) -> np.ndarray:
     In short, use cross product to get axis of rotation, then develop matrix form of
     Rodrigues rotation of formula and return rotation matrix.
     """
-    v = np.array(v).reshape(3,)
-    vt = np.array(vt).reshape(3,)
-    eps = np.finfo(float).eps  #get machine epsilon for collinearity check
+    v = np.array(v).reshape(
+        3,
+    )
+    vt = np.array(vt).reshape(
+        3,
+    )
+    eps = np.finfo(float).eps  # get machine epsilon for collinearity check
     theta = np.arccos(np.dot(v, vt) / (np.linalg.norm(v) * np.linalg.norm(vt)))
-    if (theta < eps):
+    if theta < eps:
         return np.eye(3)
-    elif (np.pi - theta < eps):
-        e_i = np.eye(3)[np.argmin(v)]  #grab axis along minimum component of v
+    elif np.pi - theta < eps:
+        e_i = np.eye(3)[np.argmin(v)]  # grab axis along minimum component of v
         rot_axis = np.cross(v, e_i).astype(float)
     else:
         rot_axis = np.cross(v, vt).astype(float)
 
     rot_axis /= np.linalg.norm(rot_axis)
-    A = np.array([[0, -rot_axis[2],
-                   rot_axis[1]], [rot_axis[2], 0, -rot_axis[0]],
-                  [-rot_axis[1], rot_axis[0], 0]])
+    A = np.array(
+        [
+            [0, -rot_axis[2], rot_axis[1]],
+            [rot_axis[2], 0, -rot_axis[0]],
+            [-rot_axis[1], rot_axis[0], 0],
+        ]
+    )
 
     return np.eye(3) + np.sin(theta) * A + (1.0 - np.cos(theta)) * A @ A
 
@@ -506,15 +481,12 @@ def rot_align(v: np.ndarray, vt: np.ndarray) -> np.ndarray:
     return scRotation.align_vectors(vt, v).as_matrix()
 
 
-def rot_zxz(alpha: float,
-            beta: float,
-            gamma: float,
-            convention="intrinsic") -> np.ndarray:
+def rot_zxz(alpha: float, beta: float, gamma: float, convention="intrinsic") -> np.ndarray:
     """Rotate to orientation described by zxz euler angles.
 
     Calculate rotation matrix as determined by zxz Euler angles. Convention can
     be either intrinsic, in which rotations are performed on the moving coordinate
-    system XYZ in reference to a fixed coordinate system xyz, or extrinsic, 
+    system XYZ in reference to a fixed coordinate system xyz, or extrinsic,
     in which the rotations are performed about the fixed coordinate system xyz.
     Intrisic rotations are performed alpha-beta-gamma, while extrinsic rotations
     are perfomed gamma-beta-alpha.
@@ -530,33 +502,32 @@ def rot_zxz(alpha: float,
     """
 
     if convention == "intrinsic":
-        return scRotation.from_euler("ZXZ", [alpha, beta, gamma],
-                                     degrees=False).as_matrix()
+        return scRotation.from_euler("ZXZ", [alpha, beta, gamma], degrees=False).as_matrix()
     elif convention == "extrinsic":
-        return scRotation.from_euler("zxz", [gamma, alpha, beta],
-                                     degrees=False).as_matrix()
+        return scRotation.from_euler("zxz", [gamma, alpha, beta], degrees=False).as_matrix()
     else:
         raise (ValueError("Invalid argument for convention."))
 
 
-def s2s_alignment(M_plane: Plane, T_plane: Plane, M_point: np.ndarray,
-                  T_point: np.ndarray) -> MultiTransform:
+def s2s_alignment(
+    M_plane: Plane, T_plane: Plane, M_point: np.ndarray, T_point: np.ndarray
+) -> MultiTransform:
     """Calculates a transformation aligning two surfaces to eachother.
 
-    Aligns two surfaces, represented by algebraic plane objects, such that 
+    Aligns two surfaces, represented by algebraic plane objects, such that
     their normal vectors are anti-parallel. The translational degree of freedom
     is resolved by minimizing the distance of a point in the target alignment to
     a transformed point from the moving frame. Returned Transformation sequence
     is a rotation followed by translation.
 
-    Specifically, given a point in the moving frame M_p with plane M and a 
-    point in the target frame T_p with plane T, calculate rotation R such that 
-    (R @ M.normal ) .* T.normal = -1 and translation vector T_t under the 
+    Specifically, given a point in the moving frame M_p with plane M and a
+    point in the target frame T_p with plane T, calculate rotation R such that
+    (R @ M.normal ) .* T.normal = -1 and translation vector T_t under the
     constraint T_t = min T_t ||R @ M_p - T_p||
 
     Args:
         M_plane (Plane): Moving plane to align to another surface
-        T_plane (Plane): Target plane to which M_plane is aligned 
+        T_plane (Plane): Target plane to which M_plane is aligned
         M_point (np.ndarray): Point in moving plane reference frame
         T_point (np.ndarray): Point in target plane reference frame
 
@@ -567,7 +538,7 @@ def s2s_alignment(M_plane: Plane, T_plane: Plane, M_point: np.ndarray,
 
     R_t = Rotation(matrix=R, origin=M_plane.point)
 
-    #TODO: why aren't these being used?
+    # TODO: why aren't these being used?
     M_plane_r = R_t.applyTransformation_alg(M_plane)
     M_point_r = R_t.applyTransformation(M_point)
 

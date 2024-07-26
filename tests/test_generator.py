@@ -2,22 +2,21 @@ import unittest
 
 import numpy as np
 from czone_test_fixtures import czone_TestCase
+from pymatgen.core import Lattice, Structure
 from test_transform import get_random_mapping
 
-from czone.generator import Generator, NullGenerator, AmorphousGenerator
-from czone.transform import (
+from czone.generator.generator import AmorphousGenerator, Generator, NullGenerator
+from czone.transform.post import ChemicalSubstitution
+from czone.transform.strain import HStrain
+from czone.transform.transform import (
     Inversion,
     Reflection,
     Rotation,
     Translation,
     rot_vtv,
-    HStrain,
-    ChemicalSubstitution,
 )
 from czone.volume.algebraic import Plane, Sphere
-
-from pymatgen.core import Lattice, Structure
-from czone.volume import Volume
+from czone.volume.volume import Volume
 
 seed = 72349
 rng = np.random.default_rng(seed=seed)
@@ -51,7 +50,7 @@ def get_transforms():
 
 
 def get_transformed_generators(G):
-    yield G.from_generator(), ' Identity'
+    yield G.from_generator(), " Identity"
     for t, msg in get_transforms():
         yield G.from_generator(transformation=[t]), msg
 
@@ -64,7 +63,7 @@ class Test_NullGenerator(czone_TestCase):
         self.assertReprEqual(A)
 
         for g, msg in get_transformed_generators(A):
-            self.assertEqual(A, g, msg=f'Failed with {msg}')
+            self.assertEqual(A, g, msg=f"Failed with {msg}")
 
     def test_supply_atoms(self):
         A = NullGenerator()
@@ -74,8 +73,8 @@ class Test_NullGenerator(czone_TestCase):
         self.assertEqual(species.shape, (0,))
         for g, msg in get_transformed_generators(A):
             t_pos, t_species = g.supply_atoms(bbox)
-            self.assertArrayEqual(pos, t_pos, msg=f'Failed with {msg}')
-            self.assertArrayEqual(species, t_species, f'Failed with {msg}')
+            self.assertArrayEqual(pos, t_pos, msg=f"Failed with {msg}")
+            self.assertArrayEqual(species, t_species, f"Failed with {msg}")
 
 
 def get_random_generator(N_species=8, with_strain=True, with_sub=True, rng=rng):
@@ -85,17 +84,15 @@ def get_random_generator(N_species=8, with_strain=True, with_sub=True, rng=rng):
         hstrain = None
 
     if with_sub and rng.uniform() < 0.5:
-        chem_sub = ChemicalSubstitution(
-            get_random_mapping(rng), frac=rng.uniform()
-        )
+        chem_sub = ChemicalSubstitution(get_random_mapping(rng), frac=rng.uniform())
     else:
         chem_sub = None
 
-    lattice = Lattice(5*np.eye(3) + rng.normal(size=(3,3)))
+    lattice = Lattice(5 * np.eye(3) + rng.normal(size=(3, 3)))
 
     N_species = rng.integers(1, N_species)
     species = rng.integers(1, 119, size=(N_species))
-    pos = rng.uniform(size=(N_species, 3) )
+    pos = rng.uniform(size=(N_species, 3))
 
     structure = Structure(lattice, species, pos)
 
@@ -107,6 +104,7 @@ def get_random_generator(N_species=8, with_strain=True, with_sub=True, rng=rng):
         strain_field=hstrain,
         post_transform=chem_sub,
     )
+
 
 class Test_Generator(czone_TestCase):
     def setUp(self):
@@ -132,13 +130,15 @@ class Test_Generator(czone_TestCase):
             self.assertArrayEqual(gpos, hpos)
             self.assertArrayEqual(gspecies, hspecies)
 
+
 def get_random_amorphous_generator(rng=rng):
-    origin = rng.uniform(-10,10, size=(1,3))
+    origin = rng.uniform(-10, 10, size=(1, 3))
     min_dist = rng.uniform(0.5, 10)
     density = rng.uniform(0.05, 1.0)
-    species = rng.integers(1,119)
+    species = rng.integers(1, 119)
 
     return AmorphousGenerator(origin, min_dist, density, species)
+
 
 class Test_AmorphousGenerator(czone_TestCase):
     def setUp(self):

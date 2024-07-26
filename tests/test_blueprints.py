@@ -1,16 +1,15 @@
-from czone_test_fixtures import czone_TestCase
+from pathlib import Path
 
 import numpy as np
 
-from czone.generator import NullGenerator
-from czone.volume import Voxel
+from czone.blueprint.blueprint import Blueprint
+from czone.blueprint.serializer import Serializer
+from czone.generator.generator import NullGenerator
+from czone.volume.voxel import Voxel
 
-from test_generator import get_random_generator, get_random_amorphous_generator
-from test_scene import get_random_scene, get_random_object
-
-from czone.blueprint import Blueprint, Serializer
-
-from pathlib import Path
+from czone_test_fixtures import czone_TestCase
+from test_generator import get_random_amorphous_generator, get_random_generator
+from test_scene import get_random_object, get_random_scene
 
 seed = 9815108923
 rng = np.random.default_rng(seed=seed)
@@ -18,6 +17,7 @@ rng = np.random.default_rng(seed=seed)
 
 class Test_Blueprint(czone_TestCase):
     """object -> blueprint -> object"""
+
     def setUp(self):
         self.N_trials = 32
 
@@ -46,7 +46,7 @@ class Test_Blueprint(czone_TestCase):
 
     def test_voxel(self):
         for _ in range(self.N_trials):
-            bases = rng.normal(size=(3,3))
+            bases = rng.normal(size=(3, 3))
             scale = rng.uniform(0.1, 10)
             origin = rng.uniform(-100, 100, size=(3,))
 
@@ -61,19 +61,21 @@ class Test_Blueprint(czone_TestCase):
                 blueprint = Blueprint(S)
                 self.assertEqual(S, blueprint.to_object())
 
+
 class Test_Serializer(czone_TestCase):
     """blueprint -> serialized form -> blueprint"""
+
     def setUp(self):
         self.N_trials = 16
-        self.formats = ['json', 'yaml', 'toml', 'h5']
-        self.generator_args = {'with_strain':False, 'with_sub':False}
+        self.formats = ["json", "yaml", "toml", "h5"]
+        self.generator_args = {"with_strain": False, "with_sub": False}
 
     def test_generator(self):
         for _ in range(self.N_trials):
             G = get_random_generator(**self.generator_args)
             blueprint = Blueprint(G)
             for f in self.formats:
-                test_path = 'generator_test_file' + '.' + f
+                test_path = "generator_test_file" + "." + f
                 Serializer.write(Path(test_path), blueprint)
 
                 test_bp = Serializer.read(Path(test_path))
@@ -85,7 +87,7 @@ class Test_Serializer(czone_TestCase):
             V = get_random_object(generator_args=self.generator_args)
             blueprint = Blueprint(V)
             for f in self.formats:
-                test_path = 'volume_test_file' + '.' + f
+                test_path = "volume_test_file" + "." + f
                 Serializer.write(Path(test_path), blueprint)
 
                 test_bp = Serializer.read(Path(test_path))
@@ -98,7 +100,7 @@ class Test_Serializer(czone_TestCase):
                 S = get_random_scene(periodic=periodic, generator_args=self.generator_args)
                 blueprint = Blueprint(S)
                 for f in self.formats:
-                    test_path = 'scene_test_file' + '.' + f
+                    test_path = "scene_test_file" + "." + f
                     Serializer.write(Path(test_path), blueprint)
 
                     test_S = Serializer.read(Path(test_path)).to_object()

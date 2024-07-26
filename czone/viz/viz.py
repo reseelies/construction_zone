@@ -1,9 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
+
 try:
     import ipywidgets as widgets
-    from ipywidgets import (FloatSlider, Layout, fixed, interact, interact_manual,
-                            interactive)
+    from ipywidgets import FloatSlider, Layout, fixed, interact, interact_manual, interactive
 except:
     print("Could not import ipywidgets.")
 
@@ -12,14 +12,11 @@ from ..scene import Scene
 
 def simple_view_with_rotate(data, azim=-60, elev=30):
     fig = plt.figure(figsize=(12, 3), constrained_layout=True)
-    fig.set_constrained_layout_pads(w_pad=0.05,
-                                    h_pad=0.05,
-                                    hspace=0.1,
-                                    wspace=0.2)
-    ax_x = fig.add_subplot(1, 4, 3, projection='3d')
-    ax_y = fig.add_subplot(1, 4, 2, projection='3d')
-    ax_z = fig.add_subplot(1, 4, 1, projection='3d')
-    ax_r = fig.add_subplot(1, 4, 4, projection='3d')
+    fig.set_constrained_layout_pads(w_pad=0.05, h_pad=0.05, hspace=0.1, wspace=0.2)
+    ax_x = fig.add_subplot(1, 4, 3, projection="3d")
+    ax_y = fig.add_subplot(1, 4, 2, projection="3d")
+    ax_z = fig.add_subplot(1, 4, 1, projection="3d")
+    ax_r = fig.add_subplot(1, 4, 4, projection="3d")
 
     ax_r.scatter(data[:, 0], data[:, 1], data[:, 2], s=30, alpha=1)
     ax_x.scatter(data[:, 0], data[:, 1], data[:, 2], s=30, alpha=1)
@@ -75,15 +72,12 @@ def simple_scene_view(scene, azim=-60, elev=30):
     bbox = scene.bounds
 
     fig = plt.figure(figsize=(12, 3), constrained_layout=True)
-    fig.set_constrained_layout_pads(w_pad=0.05,
-                                    h_pad=0.05,
-                                    hspace=0.1,
-                                    wspace=0.2)
+    fig.set_constrained_layout_pads(w_pad=0.05, h_pad=0.05, hspace=0.1, wspace=0.2)
 
-    ax_x = fig.add_subplot(1, 4, 3, projection='3d')
-    ax_y = fig.add_subplot(1, 4, 2, projection='3d')
-    ax_z = fig.add_subplot(1, 4, 1, projection='3d')
-    ax_r = fig.add_subplot(1, 4, 4, projection='3d')
+    ax_x = fig.add_subplot(1, 4, 3, projection="3d")
+    ax_y = fig.add_subplot(1, 4, 2, projection="3d")
+    ax_z = fig.add_subplot(1, 4, 1, projection="3d")
+    ax_r = fig.add_subplot(1, 4, 4, projection="3d")
 
     for s in np.unique(species):
         mask = species == s
@@ -158,15 +152,12 @@ def simple_scene_view_with_rotate(scene, azim=-60, elev=30):
     bbox = scene.bounds
 
     fig = plt.figure(figsize=(12, 3), constrained_layout=True)
-    fig.set_constrained_layout_pads(w_pad=0.05,
-                                    h_pad=0.05,
-                                    hspace=0.1,
-                                    wspace=0.2)
+    fig.set_constrained_layout_pads(w_pad=0.05, h_pad=0.05, hspace=0.1, wspace=0.2)
 
-    ax_x = fig.add_subplot(1, 4, 3, projection='3d')
-    ax_y = fig.add_subplot(1, 4, 2, projection='3d')
-    ax_z = fig.add_subplot(1, 4, 1, projection='3d')
-    ax_r = fig.add_subplot(1, 4, 4, projection='3d')
+    ax_x = fig.add_subplot(1, 4, 3, projection="3d")
+    ax_y = fig.add_subplot(1, 4, 2, projection="3d")
+    ax_z = fig.add_subplot(1, 4, 1, projection="3d")
+    ax_r = fig.add_subplot(1, 4, 4, projection="3d")
 
     for s in np.unique(species):
         mask = species == s
@@ -233,50 +224,54 @@ def simple_scene_view_with_rotate(scene, azim=-60, elev=30):
 
 
 def simple_view_widget(data):
-    azim_widget = FloatSlider(value=-60,
-                              min=-180,
-                              max=180,
-                              step=0.1,
-                              description='Azimuth',
-                              readout_format='.1f',
-                              style={'description_width': '150px'},
-                              layout=Layout(width='400px', height='30px'))
+    azim_widget = FloatSlider(
+        value=-60,
+        min=-180,
+        max=180,
+        step=0.1,
+        description="Azimuth",
+        readout_format=".1f",
+        style={"description_width": "150px"},
+        layout=Layout(width="400px", height="30px"),
+    )
 
-    elev_widget = FloatSlider(value=30,
-                              min=-90,
-                              max=90,
-                              step=0.1,
-                              description='Elevation',
-                              readout_format='.1f',
-                              style={'description_width': '150px'},
-                              layout=Layout(width='400px', height='30px'))
+    elev_widget = FloatSlider(
+        value=30,
+        min=-90,
+        max=90,
+        step=0.1,
+        description="Elevation",
+        readout_format=".1f",
+        style={"description_width": "150px"},
+        layout=Layout(width="400px", height="30px"),
+    )
 
-    return interact(simple_view_with_rotate,
-                    data=fixed(data),
-                    azim=azim_widget,
-                    elev=elev_widget)
+    return interact(simple_view_with_rotate, data=fixed(data), azim=azim_widget, elev=elev_widget)
 
 
 def simple_scene_widget(scene):
-    azim_widget = FloatSlider(value=-60,
-                              min=-180,
-                              max=180,
-                              step=0.1,
-                              description='Azimuth',
-                              readout_format='.1f',
-                              style={'description_width': '150px'},
-                              layout=Layout(width='400px', height='30px'))
+    azim_widget = FloatSlider(
+        value=-60,
+        min=-180,
+        max=180,
+        step=0.1,
+        description="Azimuth",
+        readout_format=".1f",
+        style={"description_width": "150px"},
+        layout=Layout(width="400px", height="30px"),
+    )
 
-    elev_widget = FloatSlider(value=30,
-                              min=-90,
-                              max=90,
-                              step=0.1,
-                              description='Elevation',
-                              readout_format='.1f',
-                              style={'description_width': '150px'},
-                              layout=Layout(width='400px', height='30px'))
+    elev_widget = FloatSlider(
+        value=30,
+        min=-90,
+        max=90,
+        step=0.1,
+        description="Elevation",
+        readout_format=".1f",
+        style={"description_width": "150px"},
+        layout=Layout(width="400px", height="30px"),
+    )
 
-    return interact(simple_scene_view_with_rotate,
-                    scene=fixed(scene),
-                    azim=azim_widget,
-                    elev=elev_widget)
+    return interact(
+        simple_scene_view_with_rotate, scene=fixed(scene), azim=azim_widget, elev=elev_widget
+    )

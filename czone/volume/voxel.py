@@ -1,14 +1,16 @@
-import numpy as np
 from functools import reduce
 
-class Voxel():
+import numpy as np
+
+
+class Voxel:
     """Voxel class used to span space for generators and track transformations.
 
     Voxels provide an alterable view of bases and orientation of crystalline
     generators and are the actual transformed object, not Generators.
-    This is in contrst to applying transformations directly to the underlying 
+    This is in contrst to applying transformations directly to the underlying
     pymatgen Structure object, for speed and ease of manipulation.
-    Voxels also help determine how much of a "block" to a Generator needs to 
+    Voxels also help determine how much of a "block" to a Generator needs to
     build for the purpose of supplying atoms to a larger volume.
 
     Attributes:
@@ -19,10 +21,12 @@ class Voxel():
         origin (np.ndarray): Origin of Voxel grid.
     """
 
-    def __init__(self,
-                 bases: np.ndarray = np.identity(3),
-                 scale: float = np.array([1]),
-                 origin: np.ndarray = np.array([0.0, 0.0, 0.0])):
+    def __init__(
+        self,
+        bases: np.ndarray = np.identity(3),
+        scale: float = np.array([1]),
+        origin: np.ndarray = np.array([0.0, 0.0, 0.0]),
+    ):
         self._scale = None
         self._bases = None
         self._origin = None
@@ -31,12 +35,18 @@ class Voxel():
         self.origin = origin
 
     def __repr__(self):
-        return f"Voxel(bases={repr(self.bases)}, scale={repr(self.scale)}, origin={repr(self.origin)})"
-    
+        return (
+            f"Voxel(bases={repr(self.bases)}, scale={repr(self.scale)}, origin={repr(self.origin)})"
+        )
+
     def __eq__(self, other):
         if isinstance(other, Voxel):
-            checks = [np.allclose(x, y) for x, y in zip([self.bases, self.scale, self.origin],
-                                                        [other.bases, other.scale, other.origin])]
+            checks = [
+                np.allclose(x, y)
+                for x, y in zip(
+                    [self.bases, self.scale, self.origin], [other.bases, other.scale, other.origin]
+                )
+            ]
             return reduce(lambda x, y: x and y, checks)
         else:
             return False
@@ -66,20 +76,24 @@ class Voxel():
     def bases(self, bases: np.ndarray):
         bases = np.array(bases)
 
-        assert (
-            bases.shape == (3, 3)
-        ), '''Bases must be 3x3 numpy array that defines vectors that span 3D space
+        assert bases.shape == (
+            3,
+            3,
+        ), """Bases must be 3x3 numpy array that defines vectors that span 3D space
             [0,:] = [x_1, y_1, z_1]
             [1,:] = [x_2, y_2, z_2]
-            [2,:] = [x_3, y_3, z_3]'''
+            [2,:] = [x_3, y_3, z_3]"""
 
-        #check for collinearity
-        assert (not self._collinear(
-            bases[0, :], bases[1, :])), "Bases vectors must linearly indepedent"
-        assert (not self._collinear(
-            bases[0, :], bases[2, :])), "Bases vectors must linearly indepedent"
-        assert (not self._collinear(
-            bases[1, :], bases[2, :])), "Bases vectors must linearly indepedent"
+        # check for collinearity
+        assert not self._collinear(
+            bases[0, :], bases[1, :]
+        ), "Bases vectors must linearly indepedent"
+        assert not self._collinear(
+            bases[0, :], bases[2, :]
+        ), "Bases vectors must linearly indepedent"
+        assert not self._collinear(
+            bases[1, :], bases[2, :]
+        ), "Bases vectors must linearly indepedent"
 
         self._bases = bases
 
@@ -115,16 +129,15 @@ class Voxel():
         Returns:
             bool indicating whether vectors are collinear.
         """
-        #TODO: need a better check with tolerance
-        return np.abs((np.dot(vec1, vec2) /
-                       (np.linalg.norm(vec1) * np.linalg.norm(vec2)))) == 1.0
+        # TODO: need a better check with tolerance
+        return np.abs((np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2)))) == 1.0
 
     def get_voxel_coords(self, points):
         """Convert points from Cartesian basis to voxel basis"""
         points = points - self.origin
         coords = np.linalg.solve(self.sbases, points.T).T
         return coords
-    
+
     def get_cartesian_coords(self, points):
         """Convert points from voxel basis to Cartesian basis"""
         res = (self.sbases @ points.T).T

@@ -3,20 +3,21 @@ import unittest
 import numpy as np
 from czone_test_fixtures import czone_TestCase
 
-from czone.transform import ChemicalSubstitution, HStrain
+from czone.transform.post import ChemicalSubstitution
+from czone.transform.strain import HStrain
 
 seed = 871342
 rng = np.random.default_rng(seed=seed)
 
-def get_random_mapping(rng: np.random.Generator, N=8):
 
-    Z = np.arange(1,119, dtype=int)
+def get_random_mapping(rng: np.random.Generator, N=8):
+    Z = np.arange(1, 119, dtype=int)
     targets = rng.choice(Z, N, replace=False)
     subs = rng.choice(np.setdiff1d(Z, targets), N, replace=False)
-    return {int(t):int(s) for t, s in zip(targets, subs)}
-    
-class Test_ChemicalSubstitution(czone_TestCase):
+    return {int(t): int(s) for t, s in zip(targets, subs)}
 
+
+class Test_ChemicalSubstitution(czone_TestCase):
     def setUp(self):
         self.N_trials = 128
 
@@ -34,10 +35,10 @@ class Test_HStrain(czone_TestCase):
 
     def test_init(self):
         def yield_strain_matrices():
-            for shape in ((3,), (3,3), (9,), (6,)):
+            for shape in ((3,), (3, 3), (9,), (6,)):
                 yield rng.uniform(size=shape)
 
         for _ in range(self.N_trials):
             for m in yield_strain_matrices():
-                hstrain = HStrain(m, origin='generator', mode='crystal')
+                hstrain = HStrain(m, origin="generator", mode="crystal")
                 self.assertReprEqual(hstrain)

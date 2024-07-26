@@ -1,15 +1,14 @@
 import copy
 from abc import ABC, abstractmethod
+from functools import reduce
 from typing import Generator, List, Tuple
 
 import numpy as np
 from scipy.optimize import linprog
-from scipy.spatial import HalfspaceIntersection, ConvexHull, Delaunay, QhullError
+from scipy.spatial import Delaunay, HalfspaceIntersection, QhullError
 
-from ..util.misc import round_away
-from ..transform.strain import HStrain
-
-from functools import reduce
+from czone.transform.strain import HStrain
+from czone.util.misc import round_away
 
 #####################################
 ##### Geometric Surface Classes #####
@@ -24,7 +23,7 @@ class BaseAlgebraic(ABC):
         params (Tuple): parameters describing algebraic object
         tol (float): numerical tolerance used to pad interiority checks.
                     Default is 1e-5.
-    
+
     """
 
     def __init__(self, tol: float = 1e-10):
@@ -36,9 +35,9 @@ class BaseAlgebraic(ABC):
 
         Args:
             testPoints (np.ndarray): Nx3 array of points to check.
-        
+
         Returns:
-            Nx1 logical array indicating whether or not point is on interior 
+            Nx1 logical array indicating whether or not point is on interior
             of surface.
         """
         pass
@@ -54,14 +53,14 @@ class BaseAlgebraic(ABC):
 
     @tol.setter
     def tol(self, val):
-        assert (float(val) >= 0.0)
+        assert float(val) >= 0.0
         self._tol = float(val)
 
     def from_alg_object(self, **kwargs):
         """Constructor for new algebraic objects based on existing Algebraic object.
-        
+
         Args:
-            **kwargs: "transformation"=List[BaseTransformation] to apply a 
+            **kwargs: "transformation"=List[BaseTransformation] to apply a
                         series of transformations to the copied generator.
         """
         new_alg_object = copy.deepcopy(self)
@@ -72,44 +71,46 @@ class BaseAlgebraic(ABC):
 
         return new_alg_object
 
+
 class Sphere(BaseAlgebraic):
-    """Algebraic surface for spheres. 
-    
+    """Algebraic surface for spheres.
+
     Interior points are points with distance from center smaller than the radius.
-    
+
     Attributes:
         radius (float): Radius of sphere.
         center (np.ndarray): 3x1 array representing center of sphere in space.
         tol (float): Tolerance value for interiority check. Default is 1e-5.
     """
 
-    def __init__(self,
-                 radius: float,
-                 center: np.ndarray,
-                 tol=1e-5):
-                 
+    def __init__(self, radius: float, center: np.ndarray, tol=1e-5):
         self.radius = radius
         self.center = center
 
         super().__init__(tol=tol)
 
     def __repr__(self):
-        return f"Sphere(radius={repr(self.radius)}, center={repr(self.center)}, tol={repr(self.tol)})"
+        return (
+            f"Sphere(radius={repr(self.radius)}, center={repr(self.center)}, tol={repr(self.tol)})"
+        )
 
     def __eq__(self, other):
         if isinstance(other, Sphere):
-            checks = [np.allclose(x, y) for x, y in zip([self.radius, self.center, self.tol],
-                                                        [other.radius, other.center, other.tol])]
+            checks = [
+                np.allclose(x, y)
+                for x, y in zip(
+                    [self.radius, self.center, self.tol], [other.radius, other.center, other.tol]
+                )
+            ]
             return reduce(lambda x, y: x and y, checks)
         else:
             return False
-    
+
     def checkIfInterior(self, testPoints: np.ndarray) -> np.ndarray:
-        return np.sum((testPoints - self.center)**2.0,
-                      axis=1) < (self.radius + self.tol)**2.0
+        return np.sum((testPoints - self.center) ** 2.0, axis=1) < (self.radius + self.tol) ** 2.0
 
     @property
-    def params(self): 
+    def params(self):
         """Return radius, center of Sphere."""
         return self.radius, self.center
 
@@ -132,10 +133,11 @@ class Sphere(BaseAlgebraic):
 
     @center.setter
     def center(self, center: np.ndarray):
-        center = np.array(center)  #cast to np array if not already
+        center = np.array(center)  # cast to np array if not already
         if center.size != 3 or center.shape[0] != 3:
             raise ValueError("Center must be an array with 3 elements")
         self._center = center
+
 
 class Plane(BaseAlgebraic):
     """Algebraic surface for planes in R3.
@@ -147,13 +149,10 @@ class Plane(BaseAlgebraic):
         normal (np.ndarray): normal vector describing orientation of plane.
         point (np.ndarray): point lying on plane.
         tol (float): Tolerance value for interiority check. Default is 1e-5.
-    
+
     """
 
-    def __init__(self,
-                 normal: np.ndarray,
-                 point: np.ndarray,
-                 tol: float = 1e-5):
+    def __init__(self, normal: np.ndarray, point: np.ndarray, tol: float = 1e-5):
         self.normal = normal
         self.point = point
 
@@ -165,20 +164,22 @@ class Plane(BaseAlgebraic):
     def __eq__(self, other):
         if isinstance(other, Plane):
             # check collinearity of normals
-            check_collinearity = np.isclose(np.dot(self.normal,other.normal), 1.0)
+            check_collinearity = np.isclose(np.dot(self.normal, other.normal), 1.0)
 
             # check to see if they define the same plane
-            check_origin_dist = np.isclose(np.dot(self.normal, self.point), np.dot(other.normal, other.point))
+            check_origin_dist = np.isclose(
+                np.dot(self.normal, self.point), np.dot(other.normal, other.point)
+            )
 
             # property check
             check_tol = self.tol == other.tol
 
             checks = [check_collinearity, check_origin_dist, check_tol]
 
-            return reduce(lambda x, y: x and y, checks) 
+            return reduce(lambda x, y: x and y, checks)
         else:
             return False
-    
+
     @property
     def params(self):
         """Return normal vector, point on plane of Plane."""
@@ -191,8 +192,8 @@ class Plane(BaseAlgebraic):
 
     @point.setter
     def point(self, point: np.ndarray):
-        point = np.squeeze(np.array(point))  #cast to np array if not already
-        assert (point.shape[0] == 3), "Point must be a point in 3D space"
+        point = np.squeeze(np.array(point))  # cast to np array if not already
+        assert point.shape[0] == 3, "Point must be a point in 3D space"
         self._point = point
 
     @property
@@ -202,25 +203,27 @@ class Plane(BaseAlgebraic):
 
     @normal.setter
     def normal(self, normal: np.ndarray):
-        normal = np.array(normal)  #cast to np array if not already
-        assert (normal.size == 3), "normal must be a vector in 3D space"
-        normal = np.reshape(normal, (3,)) #make a consistent shape
-        if (np.linalg.norm(normal) > np.finfo(float).eps):
+        normal = np.array(normal)  # cast to np array if not already
+        assert normal.size == 3, "normal must be a vector in 3D space"
+        normal = np.reshape(normal, (3,))  # make a consistent shape
+        if np.linalg.norm(normal) > np.finfo(float).eps:
             self._normal = normal / np.linalg.norm(normal)
         else:
-            raise ValueError(f"Input normal vector length {np.linalg.norm(normal)} is below machine precision.")
+            raise ValueError(
+                f"Input normal vector length {np.linalg.norm(normal)} is below machine precision."
+            )
 
     def checkIfInterior(self, testPoints: np.ndarray):
         return self.sdist_from_plane(testPoints) < self.tol
 
     def flip_orientation(self):
         """Flip the orientation of the plane."""
-        self.normal = - self.normal
+        self.normal = -self.normal
         return self
-    
+
     def sdist_from_plane(self, point: np.ndarray):
         """Calculate the signed distance from a point or series of points to the Plane.
-        
+
         Arg:
             point (np.ndarray): Point in space to calculate distance.
 
@@ -234,7 +237,7 @@ class Plane(BaseAlgebraic):
 
     def dist_from_plane(self, point: np.ndarray):
         """Calculate the distance from a point or series of points to the Plane.
-        
+
         Arg:
             point (np.ndarray): Point in space to calculate distance.
 
@@ -246,14 +249,14 @@ class Plane(BaseAlgebraic):
 
     def project_point(self, point: np.ndarray):
         """Project a point in space onto Plane.
-        
+
         Arg:
             point (np.ndarray): Point in space to project onto Plane.
 
         Returns:
             Projected point lying on surface of Plane.
         """
-        return point - self.sdist_from_plane(point)[:,None] * self.normal[None,:]
+        return point - self.sdist_from_plane(point)[:, None] * self.normal[None, :]
 
 
 class Cylinder(BaseAlgebraic):
@@ -270,12 +273,9 @@ class Cylinder(BaseAlgebraic):
         tol (float): Tolerance value for interiority check. Default is 1e-5.
     """
 
-    def __init__(self,
-                 axis: np.ndarray,
-                 point: np.ndarray,
-                 radius: float,
-                 length: float,
-                 tol: float = 1e-5):
+    def __init__(
+        self, axis: np.ndarray, point: np.ndarray, radius: float, length: float, tol: float = 1e-5
+    ):
         self.axis = axis
         self.point = point
         self.radius = radius
@@ -287,18 +287,23 @@ class Cylinder(BaseAlgebraic):
 
     def __eq__(self, other):
         if isinstance(other, Cylinder):
-            checks = [np.allclose(x, y) for x, y in zip([self.radius, self.length, self.point, self.tol],
-                                                        [other.radius, self.length, other.point, other.tol])]
+            checks = [
+                np.allclose(x, y)
+                for x, y in zip(
+                    [self.radius, self.length, self.point, self.tol],
+                    [other.radius, self.length, other.point, other.tol],
+                )
+            ]
             return reduce(lambda x, y: x and y, checks)
         else:
             return False
-   
+
     def params(self):
         """Return axis, point, radius, and length of cylinder."""
         return self.axis, self.point, self.radius, self.length
 
     @property
-    def axis(self): 
+    def axis(self):
         """Vector lying parallel to central axis."""
         return self._axis
 
@@ -327,7 +332,7 @@ class Cylinder(BaseAlgebraic):
     @radius.setter
     def radius(self, val):
         val = float(val)
-        if val < np.finfo(float).eps: # negative or subnormal
+        if val < np.finfo(float).eps:  # negative or subnormal
             raise ValueError(f"Radius must be positive but is close to zero or negative.")
         self._radius = val
 
@@ -339,51 +344,51 @@ class Cylinder(BaseAlgebraic):
     @length.setter
     def length(self, val):
         val = float(val)
-        if val < np.finfo(float).eps: # negative or subnormal
+        if val < np.finfo(float).eps:  # negative or subnormal
             raise ValueError(f"Length must be positive but is close to zero or negative.")
         self._length = val
 
     def checkIfInterior(self, testPoints):
-        rad_dists = np.linalg.norm(np.cross(testPoints - self.point,
-                                        self.axis[None, :]),
-                               axis=1)
+        rad_dists = np.linalg.norm(np.cross(testPoints - self.point, self.axis[None, :]), axis=1)
 
         rad_check = rad_dists < self.radius + self.tol
 
-        length_dists = np.abs(np.dot(testPoints-self.point, self.axis))
-        length_check = length_dists < self.length/2.0 + self.tol
-        return np.logical_and(rad_check,length_check)
+        length_dists = np.abs(np.dot(testPoints - self.point, self.axis))
+        length_check = length_dists < self.length / 2.0 + self.tol
+        return np.logical_and(rad_check, length_check)
 
     def get_bounding_box(self):
         # make a square inscribing cylinder at center disk
         # any rotation is valid
 
         # need vz to be normalized to project out vs_0
-        vz = np.copy(self.axis.T)[:,None]
+        vz = np.copy(self.axis.T)[:, None]
 
         # get vectors perpendicular to axis
-        vs_0 = np.array([[1,1,1]]).T # any vector works; fix to make generation stable
-        vs_0 = vs_0/np.linalg.norm(vs_0)
+        vs_0 = np.array([[1, 1, 1]]).T  # any vector works; fix to make generation stable
+        vs_0 = vs_0 / np.linalg.norm(vs_0)
         vs_0 = vs_0 - (vs_0.T @ vz) * vz
-        vs_0 = vs_0/np.linalg.norm(vs_0)
+        vs_0 = vs_0 / np.linalg.norm(vs_0)
 
         vs_1 = np.cross(vs_0, vz, axis=0)
-        vs_1 = vs_1/np.linalg.norm(vs_1)
+        vs_1 = vs_1 / np.linalg.norm(vs_1)
 
         vs_0 = np.squeeze(vs_0)
         vs_1 = np.squeeze(vs_1)
 
         # factors of two cancel
-        square = self.point + (self.radius)*np.array([vs_0+vs_1,
-                                        vs_0-vs_1,
-                                        -vs_0+vs_1,
-                                        -vs_0-vs_1,
-                                            ])
-    
-        # extend square halfway in both directions into rectangular prism
-        vz = self.length*vz / 2.0
-        return np.vstack([square+vz.T, square-vz.T])
+        square = self.point + (self.radius) * np.array(
+            [
+                vs_0 + vs_1,
+                vs_0 - vs_1,
+                -vs_0 + vs_1,
+                -vs_0 - vs_1,
+            ]
+        )
 
+        # extend square halfway in both directions into rectangular prism
+        vz = self.length * vz / 2.0
+        return np.vstack([square + vz.T, square - vz.T])
 
 
 #####################################
@@ -398,9 +403,9 @@ def convex_hull_to_planes(points, **kwargs):
     facets = tri.convex_hull
 
     def facet_to_plane(facet):
-        v0 = points[facet[1],:] - points[facet[0],:]
-        v1 = points[facet[2],:] - points[facet[0],:]
-        n = np.cross(v0,v1)
+        v0 = points[facet[1], :] - points[facet[0], :]
+        v1 = points[facet[2], :] - points[facet[0], :]
+        n = np.cross(v0, v1)
         return Plane(n, points[facet[0]])
 
     planes = [facet_to_plane(f) for f in facets]
@@ -415,12 +420,13 @@ def convex_hull_to_planes(points, **kwargs):
 
     return planes
 
+
 def get_bounding_box(planes: List[Plane]):
     """Get convex region interior to set of Planes, if one exists.
 
-    Determines if set of planes forms a valid interior convex region. If so, 
-    returns vertices of convex region. Uses scipy half space intersection and 
-    linear progamming routines to determine boundaries of convex region and 
+    Determines if set of planes forms a valid interior convex region. If so,
+    returns vertices of convex region. Uses scipy half space intersection and
+    linear progamming routines to determine boundaries of convex region and
     valid interior points.
 
     Args:
@@ -449,27 +455,27 @@ def get_bounding_box(planes: List[Plane]):
         d[i, 0] = -1.0 * np.dot(n.squeeze(), (p + shift).squeeze())
         norms[i, 0] = np.linalg.norm(n)
 
-    #check feasiblity of region and get interior point
+    # check feasiblity of region and get interior point
     c = np.zeros(4)
     c[-1] = -1
 
     res = linprog(c, A_ub=np.hstack([A, norms]), b_ub=-1.0 * d)
-    if (res.status == 0):
+    if res.status == 0:
         try:
             hs = HalfspaceIntersection(np.hstack([A, d]), res.x[:-1])
         except QhullError:
-            return np.empty((0,3)), 2
-            
+            return np.empty((0, 3)), 2
+
         return hs.intersections - shift, res.status
     else:
-        return np.empty((0,3)), res.status
+        return np.empty((0, 3)), res.status
 
-def snap_plane_near_point(point: np.ndarray,
-                          generator: Generator,
-                          miller_indices: Tuple[int],
-                          mode: str = "nearest"):
+
+def snap_plane_near_point(
+    point: np.ndarray, generator: Generator, miller_indices: Tuple[int], mode: str = "nearest"
+):
     """Determine nearest crystallographic nearest to point in space for given crystal coordinate system.
-    
+
     Args:
         point (np.ndarray): Point in space.
         generator (Generator): Generator describing crystal coordinat system.
@@ -479,28 +485,28 @@ def snap_plane_near_point(point: np.ndarray,
                     for next furthest valid plane from generator origin.
 
     Returns:
-        Plane in space with orientation given by Miller indices snapped to 
+        Plane in space with orientation given by Miller indices snapped to
         nearest valid location.
 
     """
 
     miller_indices = np.array(miller_indices)
 
-
     # check if generator has a strain field
     if generator.strain_field is None:
         # get point coordinates in generator coordinate system
         point_fcoord = np.array(np.linalg.solve(generator.voxel.sbases, point))
     else:
-        assert ( isinstance(
-            generator.strain_field, HStrain)), "Finding Miller planes with inhomogenous strain fields is not supported."
+        assert isinstance(
+            generator.strain_field, HStrain
+        ), "Finding Miller planes with inhomogenous strain fields is not supported."
 
         if generator.strain_field.mode == "crystal":
             H = generator.strain_field.matrix
             point_fcoord = np.array(np.linalg.solve(H @ generator.voxel.sbases, point))
 
     # get lattice points that are intersected by miller plane
-    with np.errstate(divide="ignore"):  #check for infs directly
+    with np.errstate(divide="ignore"):  # check for infs directly
         target_fcoord = 1 / miller_indices
 
     new_point = np.zeros((3, 1))
@@ -510,16 +516,25 @@ def snap_plane_near_point(point: np.ndarray,
     # weights given to all lattice vectors
     if mode == "nearest":
         for i in range(3):
-            new_point[i,0] = np.round(point_fcoord[i]/target_fcoord[i])*target_fcoord[i] \
-                                if not np.isinf(target_fcoord[i]) else point_fcoord[i]
+            new_point[i, 0] = (
+                np.round(point_fcoord[i] / target_fcoord[i]) * target_fcoord[i]
+                if not np.isinf(target_fcoord[i])
+                else point_fcoord[i]
+            )
     elif mode == "ceil":
         for i in range(3):
-            new_point[i,0] = round_away(point_fcoord[i]/target_fcoord[i])*target_fcoord[i] \
-                                if not np.isinf(target_fcoord[i]) else point_fcoord[i]
+            new_point[i, 0] = (
+                round_away(point_fcoord[i] / target_fcoord[i]) * target_fcoord[i]
+                if not np.isinf(target_fcoord[i])
+                else point_fcoord[i]
+            )
     elif mode == "floor":
         for i in range(3):
-            new_point[i,0] = np.fix(point_fcoord[i]/target_fcoord[i])*target_fcoord[i] \
-                                if not np.isinf(target_fcoord[i]) else point_fcoord[i]
+            new_point[i, 0] = (
+                np.fix(point_fcoord[i] / target_fcoord[i]) * target_fcoord[i]
+                if not np.isinf(target_fcoord[i])
+                else point_fcoord[i]
+            )
 
     if generator.strain_field is None:
         # scale back to real space

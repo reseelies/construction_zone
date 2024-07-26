@@ -1,2 +1,1 @@
-from .generator import *
-from .amorphous_algorithms import *
+# from czone.generator.generator import AmorphousGenerator, Generator, NullGenerator
